@@ -6,9 +6,10 @@ create table if not exists public.workspace (
 );
 alter table public.workspace enable row level security;
 revoke all on public.workspace from anon, authenticated;
+grant select, insert, update, delete on public.workspace to service_role;
 insert into public.workspace(id,data) values (1,'{"members":[],"clients":[],"tasks":[],"notifications":[],"events":[]}') on conflict do nothing;
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values('raw-footage','raw-footage',false,1073741824,array['video/mp4','video/quicktime','video/webm','video/x-m4v'])
+values('raw-footage','raw-footage',false,52428800,array['video/mp4','video/quicktime','video/webm','video/x-m4v'])
 on conflict(id) do nothing;
 -- After creating the owner's Auth user (without sending an invitation), insert their real UUID:
 -- update public.workspace set data=jsonb_set(data,'{members}', '[{"id":"AUTH-USER-UUID","name":"YOUR-NAME","role":"approver"}]'), version=version+1 where id=1;
