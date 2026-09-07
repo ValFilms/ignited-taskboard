@@ -3,6 +3,19 @@ import assert from "node:assert/strict";
 import { demoState } from "../lib/demo";
 import { transition, visibleState, tick, importClient } from "../lib/workflow";
 const now = Date.UTC(2026, 8, 7, 0);
+test("in-app refresh checks deadlines and reading a notification only changes the recipient's selected item", () => {
+  const s = demoState();
+  const john = s.members[2];
+  const state = tick(transition(s, john, { type: "refresh" }, now), now + 1000 * 3600 * 72);
+  const mine = state.notifications.filter(n => n.userId === john.id);
+  assert(mine.length > 0);
+  const other = state.notifications.find(n => n.userId !== john.id)!;
+  const next = transition(state, john, { type: "read", key: mine[0].id }, now);
+  assert.equal(next.notifications.find(n => n.id === mine[0].id)!.read, true);
+  assert.equal(next.notifications.find(n => n.id === other.id)!.read, other.read);
+  const denied = transition(state, john, { type: "read", key: other.id }, now);
+  assert.equal(denied.notifications.find(n => n.id === other.id)!.read, other.read);
+});
 test("members receive only assigned work and necessary client context", () => {
   const s = demoState(),
     john = s.members[2],
