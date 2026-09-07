@@ -235,10 +235,11 @@ export function transition(
   );
   if (a.type === "read") {
     s.notifications
-      .filter((n) => n.userId === m.id)
+      .filter((n) => n.userId === m.id && (!a.key || n.id === a.key))
       .forEach((n) => (n.read = true));
     return s;
   }
+  if (a.type === "refresh") return s;
   if (a.type === "member") {
     assert(isOwner(m), "Owners only");
     const u = a.member;
