@@ -290,7 +290,7 @@ export function transition(
       break;
     case "profile":
       own();
-      for (const k of ["offer", "phone", "closebot"] as const)
+      for (const k of ["offer", "phone", "closebot", "person", "email", "location"] as const)
         if (typeof a.profile?.[k] === "string") client[k] = a.profile[k]!;
       break;
     case "owner":
@@ -491,19 +491,22 @@ export function importClient(
     person: string;
     email: string;
     location: string;
+    phone?: string;
+    offer?: string;
     historical?: boolean;
   },
   now = Date.now(),
 ) {
   assert(
-    p.sourceId && p.name && p.email,
-    "Submission ID, business name and email are required",
+    p.sourceId.trim() && p.name.trim(),
+    "Submission ID and business name are required",
   );
   if (s.clients.some((c) => c.sourceId === p.sourceId)) return s;
   assert(
     !s.clients.some(
       (c) =>
-        c.email.toLowerCase() === p.email.toLowerCase() &&
+        ((Boolean(p.email.trim()) && c.email.toLowerCase() === p.email.toLowerCase()) ||
+          (Boolean(p.phone?.trim()) && c.phone === p.phone)) &&
         c.name.toLowerCase() === p.name.toLowerCase(),
     ),
     "Potential duplicate: review the existing business before importing",
@@ -521,8 +524,8 @@ export function importClient(
     stage: "Onboarding",
     createdAt: iso(now),
     onboarding: Object.fromEntries(checklist.map((k) => [k, false])),
-    offer: "",
-    phone: "",
+    offer: p.offer || "",
+    phone: p.phone || "",
     closebot: "",
     rawFiles: [],
     launchCall: false,
