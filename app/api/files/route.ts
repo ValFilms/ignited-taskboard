@@ -29,8 +29,8 @@ export async function POST(req: Request) {
     if (c.stage !== "Filming")
       throw new Error("Client is not ready for filming");
     if (a.type === "sign") {
-      if (!/^video\//.test(a.contentType) || a.size > 1024 * 1024 * 1024)
-        throw new Error("Choose a video up to 1 GB");
+      if (!/^video\//.test(a.contentType) || a.size > 50 * 1024 * 1024)
+        throw new Error("Choose a video up to 50 MB (current storage plan limit)");
       const name = String(a.name)
         .replace(/[^a-zA-Z0-9._-]/g, "_")
         .slice(-160);
