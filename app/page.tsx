@@ -317,7 +317,7 @@ export default function Page() {
             <h1>
               Great work.
               <br />
-              Clear next steps.
+              <em>Clear next steps.</em>
             </h1>
             <p>From the first shoot to the next client milestone.</p>
           </div>
