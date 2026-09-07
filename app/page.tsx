@@ -1046,9 +1046,12 @@ export default function Page() {
                 </div>
                 <div>
                   <small>CONTACT</small>
-                  <p>{current.person}</p>
-                  {owner && (
+                  <p>{current.person || "Contact name missing"}</p>
+                  {owner && current.email && (
                     <a href={`mailto:${current.email}`}>{current.email}</a>
+                  )}
+                  {owner && (!current.person.trim() || !current.email.trim()) && (
+                    <p role="status">Contact details incomplete. Add the name and email below.</p>
                   )}
                 </div>
               </div>
@@ -1360,6 +1363,9 @@ export default function Page() {
                         type: "profile",
                         clientId: current.id,
                         profile: {
+                          person: String(f.get("person")),
+                          email: String(f.get("email")),
+                          location: String(f.get("location")),
                           offer: String(f.get("offer")),
                           phone: String(f.get("phone")),
                           closebot: String(f.get("closebot")),
@@ -1371,6 +1377,18 @@ export default function Page() {
                     <label>
                       Offer
                       <input name="offer" defaultValue={current.offer} />
+                    </label>
+                    <label>
+                      Contact name
+                      <input name="person" defaultValue={current.person} />
+                    </label>
+                    <label>
+                      Contact email
+                      <input name="email" type="email" defaultValue={current.email} />
+                    </label>
+                    <label>
+                      General location
+                      <input name="location" defaultValue={current.location} />
                     </label>
                     <label>
                       Business phone
