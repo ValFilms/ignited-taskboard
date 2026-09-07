@@ -50,7 +50,7 @@ For existing responses, use the same stable IDs and add `historical: true`. Do n
 
 ## Notifications and mobile
 
-In-app inbox refreshes every 30 seconds while signed in. Server scheduler is needed when no one is using the app. Browser/PWA push is **not implemented or enabled**, and there is no email provider. iOS web push requires Home Screen installation on iOS/iPadOS 16.4+ plus a user permission gesture and a configured push sender. Android/desktop also need permission and a push service. The manifest supports standalone display; offline functionality is not provided.
+While the app is visible, authenticated refreshes check deadlines and update the inbox every 15 seconds. New unread notices appear as dismissible pop-ups; opening one marks only that notice read. Existing inbox entries do not replay as pop-ups at sign-in. A server scheduler is still needed when no one is using the app. Browser/PWA push is **not implemented or enabled**, and there is no email provider. iOS web push requires Home Screen installation on iOS/iPadOS 16.4+ plus a user permission gesture and a configured push sender. Android/desktop also need permission and a push service. The manifest supports standalone display; offline functionality is not provided.
 
 Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing), [Apple web push](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/), [Supabase Auth](https://supabase.com/docs/guides/auth), [private Storage](https://supabase.com/docs/guides/storage/security/access-control).
 
