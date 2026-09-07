@@ -241,9 +241,19 @@ export default function Page() {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const result = await auth!.auth.signInWithPassword({ email, password });
-    if (result.error) setError(result.error.message);
-    setBusy(false);
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Sign in failed.");
+      const session = await auth!.auth.setSession(result);
+      if (session.error) throw session.error;
+      setPassword("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign in failed.");
+    } finally { setBusy(false); }
   }
   async function upload(c: Client) {
     setBusy(true);
@@ -318,9 +328,10 @@ export default function Page() {
           <h2>Let’s move things forward.</h2>
           <p className="muted">Sign in with your team account.</p>
           <label>
-            Email
+            Username
             <input
-              type="email"
+              type="text"
+              autoCapitalize="none"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
