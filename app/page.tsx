@@ -36,6 +36,7 @@ import {
   visibleState,
 } from "../lib/workflow";
 import { demoState } from "../lib/demo";
+import NotificationToasts from "./notification-toasts";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -109,10 +110,15 @@ export default function Page() {
   useEffect(() => {
     if (!token) return;
     let active = true;
+    let loading = false;
     const load = async () => {
+      if (loading || document.visibilityState === "hidden") return;
+      loading = true;
       try {
         const r = await fetch("/api/workspace", {
-            headers: { Authorization: `Bearer ${token}` },
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "refresh" }),
           }),
           j = await r.json();
         if (!r.ok) throw new Error(j.error);
@@ -122,13 +128,15 @@ export default function Page() {
         }
       } catch (e) {
         if (active) setError(String(e));
-      }
+      } finally { loading = false; }
     };
     void load();
-    const timer = setInterval(load, 30000);
+    const timer = setInterval(load, 15000);
+    document.addEventListener("visibilitychange", load);
     return () => {
       active = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", load);
     };
   }, [token]);
   const me = all?.members.find((x) => x.id === userId);
@@ -521,11 +529,12 @@ export default function Page() {
               })}
             </span>
             <button
-              className="icon-button"
-              aria-label="Open notifications"
+              className="icon-button notification-bell"
+              aria-label={`Open notifications, ${s.notifications.filter(n => !n.read).length} unread`}
               onClick={() => setView("notifications")}
             >
               <Bell size={19} />
+              {s.notifications.some(n => !n.read) && <span className="notification-count">{Math.min(s.notifications.filter(n => !n.read).length, 99)}</span>}
             </button>
             <span className="avatar small">{initials(me.name)}</span>
           </div>
@@ -816,7 +825,7 @@ export default function Page() {
                   <button
                     className="notice"
                     key={n.id}
-                    onClick={() => setSelected(n.clientId)}
+                    onClick={() => { setSelected(n.clientId); void act({ type: "read", key: n.id }); }}
                   >
                     <span className={n.read ? "read-dot" : "unread-dot"} />
                     <span>
@@ -909,14 +918,10 @@ export default function Page() {
                     <b>In-app</b>
                   </div>
                   <p className="muted">
-                    Push and email delivery are not enabled. A scheduler must
-                    call the reminder endpoint every five minutes for unattended
-                    reminders.
-                  </p>
-                  <p className="muted">
-                    On iPhone, Home Screen installation is required for future
-                    web push support. Installing this version does not enable
-                    push.
+                    New notifications appear as pop-ups while the taskboard is open.
+                    The inbox and deadline checks refresh every 15 seconds.
+                    Dismiss a pop-up to keep it unread, or open it to view the client.
+                    When everyone closes the app, deadline checks resume the next time someone opens it.
                   </p>
                 </div>
               </section>
@@ -1437,6 +1442,10 @@ export default function Page() {
           </section>
         </div>
       )}
+      <NotificationToasts key={userId} notices={all!.notifications.filter(n => n.userId === userId)} onOpen={n => {
+        setSelected(n.clientId);
+        void act({ type: "read", key: n.id });
+      }} />
     </div>
   );
 }

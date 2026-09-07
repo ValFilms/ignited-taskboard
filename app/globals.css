@@ -1457,6 +1457,23 @@ h2, h3 { font-weight: 800; }
     min-width: 0;
   }
 }
+.notification-bell { position: relative; }
+.notification-count { position: absolute; top: -5px; right: -7px; min-width: 19px; height: 19px;
+  padding: 1px 4px; border-radius: 10px; background: var(--accent); color: #150a04;
+  font-size: 12px; font-weight: 800; line-height: 17px; }
+.notification-toasts { position: fixed; bottom: 24px; right: 24px; z-index: 30;
+  width: min(390px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 12px; }
+.notification-toast { display: flex; align-items: flex-start; gap: 12px; padding: 18px;
+  border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px;
+  background: var(--surface); box-shadow: 0 12px 40px #00000066; }
+.notification-toast > svg { color: var(--accent); flex-shrink: 0; margin-top: 3px; }
+.toast-open { min-width: 0; flex: 1; padding: 0; border: 0; background: none; text-align: left; }
+.toast-open strong, .toast-open span, .toast-open small { display: block; }
+.toast-open strong { font-size: 14px; margin-bottom: 6px; }
+.toast-open span { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.toast-open small { font-size: 12px; color: var(--accent-hover); margin-top: 8px; }
+.notification-toast .icon-button { flex-shrink: 0; }
+@media (max-width: 760px) { .notification-toasts { bottom: 16px; right: 16px; } }
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
