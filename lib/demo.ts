@@ -5,7 +5,7 @@ export function demoState(): State {
     { id: "owner", name: "You", role: "approver" as const },
     { id: "yaniv", name: "Yaniv", role: "manager" as const },
     { id: "john", name: "John", role: "editor" as const },
-    { id: "carl", name: "Carl", role: "campaign" as const },
+    { id: "carl", name: "Karl", role: "campaign" as const },
   ];
   const examples: [string, string, Stage][] = [
     ["Summit Auto Detail", "Austin, TX", "In review"],
