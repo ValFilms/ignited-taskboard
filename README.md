@@ -15,7 +15,17 @@ Node 24, npm. `npm ci`, `npm run dev`. `npm test` checks permissions and state t
 5. Configure an external scheduler to GET `/api/cron` every five minutes, with `Authorization: Bearer CRON_SECRET`. Alternatively use a Vercel plan that supports this cadence and add the cron definition. **No once-daily Hobby cron is substituted for five-minute deadlines.** Cron creates in-app notices; it does not deliver push/email. Check successful HTTP responses and scheduler failures.
 6. Connect the actual Google Form via the Apps Script below. Review field mapping using a real test response. Use a stable Google Forms response ID. Confirm duplicate replays do not add clients. Backfill explicitly with `historical: true`; inspect a small batch before importing the full history.
 
-## Google Forms trigger
+## Automatic sync for the connected response sheet
+
+`integrations/google-intake.gs` is the connector for Mobile Detailing (Responses). Install it in a **private standalone** Apps Script project; the shared sheet's bound project must not hold the webhook secret. Set `FORM_WEBHOOK_SECRET` in that project's Script Properties to match Vercel production, create the taskboard approver account, then run `installSync` and authorize the Google permissions. Confirm both triggers exist and a successful execution before treating sync as active.
+
+The form-submit trigger processes new responses; a five-minute timer catches edits and retries failed requests while browsers are closed. Google controls actual trigger timing. Only changed rows are sent, and only successful responses are acknowledged. Reinstalling does not duplicate triggers. Existing rows are tagged as historical before the first run and produce no old onboarding notifications.
+
+Response IDs use the sheet ID, tab ID and original timestamp, so sorting rows and changing business details retain the same client. **Do not alter original response timestamps.** Duplicate timestamps stop the run for review. Deleting a sheet row does not delete its client or work history. Source details update in place; blank contact names/emails preserve any contact information filled in by an owner. Task assignments, stage, deadlines and approval history remain unchanged. Names/emails are currently absent from the Form; owners can complete them in the app.
+
+Use Apps Script Executions and Script Properties `LAST_SUCCESS_AT` / `LAST_ERROR` to inspect sync health. A maximum of 50 changed rows is attempted per run; outstanding rows retry at the next interval. The separate `/api/cron` reminder scheduler is still configured independently.
+
+## Alternative Google Forms trigger
 
 Use a **form-bound** Apps Script project and an installable `onFormSubmit` trigger. Set script properties `APP_URL` and `FORM_WEBHOOK_SECRET` privately. The example deliberately expects named questions; adapt these names to the real form. This trigger does not read a Sheet and does not mark onboarding complete.
 
