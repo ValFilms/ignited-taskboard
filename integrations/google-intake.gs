@@ -71,7 +71,14 @@ function syncIntake() {
             historical: props.getProperty('historical:' + row.sourceId) === '1'
           }))
         });
-        if (response.getResponseCode() !== 200) throw new Error('HTTP ' + response.getResponseCode());
+        if (response.getResponseCode() !== 200) {
+          let reason = '';
+          try {
+            if (JSON.parse(response.getContentText()).error === 'Configure the approver first')
+              reason = ': owner account needs configuration';
+          } catch (_) { /* Keep unexpected response contents out of logs. */ }
+          throw new Error('HTTP ' + response.getResponseCode() + reason);
+        }
         props.setProperty(key, fingerprint); // Only acknowledge confirmed success.
       } catch (error) {
         failures.push(row.sourceId.slice(-8) + ': ' + String(error.message).slice(0,100));
