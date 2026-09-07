@@ -182,6 +182,17 @@ test("intake accepts missing contacts, preserves business details and supports o
   const updated = transition(s, s.members[0], { type: "profile", clientId: client.id,
     profile: { person: "Client contact", email: "contact@example.com", location: "City" } }, now);
   assert.equal(updated.clients[count].email, "contact@example.com");
+  updated.clients[count].stage = "Active";
+  updated.clients[count].onboarding["Business intake"] = true;
+  const notices = updated.notifications.length;
+  importClient(updated, { ...payload, name: "Renamed business", phone: "555-0101" }, now);
+  assert.equal(updated.clients.length, count + 1);
+  assert.equal(updated.clients[count].name, "Renamed business");
+  assert.equal(updated.clients[count].phone, "555-0101");
+  assert.equal(updated.clients[count].email, "contact@example.com");
+  assert.equal(updated.clients[count].stage, "Active");
+  assert.equal(updated.clients[count].onboarding["Business intake"], true);
+  assert.equal(updated.notifications.length, notices);
   assert.throws(() => transition(s, s.members[2], { type: "profile", clientId: client.id,
     profile: { email: "changed@example.com" } }, now));
 });
