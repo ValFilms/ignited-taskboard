@@ -18,6 +18,9 @@ export async function POST(req: Request) {
     for (const k of ["sourceId", "name", "person", "email", "location"])
       if (typeof p[k] !== "string" || p[k].length > 500)
         throw new Error(`Invalid ${k}`);
+    for (const k of ["phone", "offer"])
+      if (p[k] !== undefined && (typeof p[k] !== "string" || p[k].length > 500))
+        throw new Error(`Invalid ${k}`);
     await mutate((s) =>
       importClient(s, { ...p, historical: p.historical === true }),
     );
