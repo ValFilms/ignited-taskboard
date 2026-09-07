@@ -338,7 +338,7 @@ export default function Page() {
             />
           </label>
           <button className="primary" disabled={busy || !!token}>
-            {busy ? "Signing in…" : token ? "Loading workspace…" : "Sign in"}
+            {busy ? "Signing in…" : token ? (error ? "Workspace access needed" : "Loading workspace…") : "Sign in"}
             <ArrowUpRight size={18} />
           </button>
           {error && (
@@ -346,6 +346,7 @@ export default function Page() {
               {error}
             </p>
           )}
+          {token && <button type="button" className="secondary" onClick={() => void auth!.auth.signOut()}>Sign out</button>}
           <small>
             Access is limited to configured team members. Contact your workspace
             owner if you need an account.
@@ -1090,7 +1091,7 @@ export default function Page() {
                   <label className="upload-box">
                     <Upload />
                     <strong>Choose location shout-out videos</strong>
-                    <span>Up to 1 GB per file · max 20 files</span>
+                    <span>Up to 50 MB per file · max 20 files</span>
                     <input
                       type="file"
                       accept="video/*"
