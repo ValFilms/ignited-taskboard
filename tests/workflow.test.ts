@@ -164,6 +164,27 @@ test("form import is idempotent; old records stay quiet and do not imply complet
     /duplicate/,
   );
 });
+test("intake accepts missing contacts, preserves business details and supports owner completion", () => {
+  const s = demoState();
+  const payload = { sourceId: "sheet-blank-contact", name: "New detailing business",
+    person: "", email: "", location: "", phone: "555-0100", offer: "$150 detail", historical: true };
+  const count = s.clients.length;
+  importClient(s, payload, now);
+  importClient(s, payload, now);
+  assert.equal(s.clients.length, count + 1);
+  const client = s.clients[count];
+  assert.equal(client.email, "");
+  assert.equal(client.person, "");
+  assert.equal(client.phone, payload.phone);
+  assert.equal(client.offer, payload.offer);
+  assert(Object.values(client.onboarding).every((v) => !v));
+  assert.throws(() => importClient(s, { ...payload, sourceId: "another-response" }, now), /duplicate/);
+  const updated = transition(s, s.members[0], { type: "profile", clientId: client.id,
+    profile: { person: "Client contact", email: "contact@example.com", location: "City" } }, now);
+  assert.equal(updated.clients[count].email, "contact@example.com");
+  assert.throws(() => transition(s, s.members[2], { type: "profile", clientId: client.id,
+    profile: { email: "changed@example.com" } }, now));
+});
 test("reminders deduplicate; active care assigns only one outstanding update", () => {
   const s = demoState();
   s.clients[7].nextUpdate = new Date(now).toISOString();
