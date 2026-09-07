@@ -501,7 +501,17 @@ export function importClient(
     p.sourceId.trim() && p.name.trim(),
     "Submission ID and business name are required",
   );
-  if (s.clients.some((c) => c.sourceId === p.sourceId)) return s;
+  const existing = s.clients.find((c) => c.sourceId === p.sourceId);
+  if (existing) {
+    // Refresh source fields without resetting work or erasing manually completed contacts.
+    existing.name = p.name;
+    existing.location = p.location;
+    if (p.phone !== undefined) existing.phone = p.phone;
+    if (p.offer !== undefined) existing.offer = p.offer;
+    if (p.person.trim()) existing.person = p.person;
+    if (p.email.trim()) existing.email = p.email;
+    return s;
+  }
   assert(
     !s.clients.some(
       (c) =>
