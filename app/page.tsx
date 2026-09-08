@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
@@ -37,6 +37,7 @@ import {
 } from "../lib/workflow";
 import { demoState } from "../lib/demo";
 import NotificationToasts from "./notification-toasts";
+import { authenticatedRequest } from "../lib/auth-request";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -77,6 +78,8 @@ function initials(name: string) {
     .join("");
 }
 export default function Page() {
+  const changes = useRef(0);
+  const currentUser = useRef("");
   const [all, setAll] = useState<State | null>(null),
     [token, setToken] = useState(""),
     [userId, setUserId] = useState("owner"),
@@ -101,6 +104,14 @@ export default function Page() {
     const {
       data: { subscription },
     } = auth.auth.onAuthStateChange((_event, session) => {
+      if (currentUser.current !== (session?.user.id || "")) {
+        currentUser.current = session?.user.id || "";
+        changes.current++;
+        setAll(null);
+        setSelected(null);
+        setView("board");
+        setError("");
+      }
       setToken(session?.access_token || "");
       setUserId(session?.user.id || "");
       if (!session) setAll(null);
@@ -114,20 +125,15 @@ export default function Page() {
     const load = async () => {
       if (loading || document.visibilityState === "hidden") return;
       loading = true;
+      const revision = changes.current;
       try {
-        const r = await fetch("/api/workspace", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "refresh" }),
-          }),
-          j = await r.json();
-        if (!r.ok) throw new Error(j.error);
-        if (active) {
+        const j = await api("/api/workspace", { type: "refresh" });
+        if (active && revision === changes.current) {
           setAll(j);
           setError("");
         }
       } catch (e) {
-        if (active) setError(String(e));
+        if (active && revision === changes.current) setError((e as Error).message);
       } finally { loading = false; }
     };
     void load();
@@ -142,6 +148,9 @@ export default function Page() {
   const me = all?.members.find((x) => x.id === userId);
   const s = all && me ? visibleState(all, me) : null;
   const owner = me ? isOwner(me) : false;
+  useEffect(() => {
+    if (me && !isOwner(me) && ["board", "approvals", "sales"].includes(view)) setView("work");
+  }, [me, view]);
   useEffect(() => {
     if (!all || !me) return;
     const context = (
@@ -217,27 +226,40 @@ export default function Page() {
       previous?.focus();
     };
   }, [selected]);
+  function expireSession() {
+    changes.current++;
+    currentUser.current = "";
+    setToken("");
+    setAll(null);
+    setSelected(null);
+    setError("Your session expired. Please sign in again.");
+    void auth!.auth.signOut({ scope: "local" });
+  }
+  async function signOut() {
+    changes.current++;
+    currentUser.current = "";
+    setAll(null);
+    setToken("");
+    setSelected(null);
+    setError("");
+    setPassword("");
+    await auth!.auth.signOut({ scope: "local" });
+  }
   async function api(path: string, body: unknown) {
-    const r = await fetch(path, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error || "Request failed");
-    return j;
+    return authenticatedRequest(path, body, token, async () => {
+      const { data, error } = await auth!.auth.refreshSession();
+      return error ? null : data.session?.access_token || null;
+    }, expireSession);
   }
   async function act(a: Action) {
     if (!all || !me) return;
     setBusy(true);
+    const actor = currentUser.current;
+    changes.current++;
     setError("");
     try {
-      setAll(
-        configured ? await api("/api/workspace", a) : transition(all, me, a),
-      );
+      const next = configured ? await api("/api/workspace", a) : transition(all, me, a);
+      if (actor === currentUser.current) { changes.current++; setAll(next); }
       setValue("");
     } catch (e) {
       setError((e as Error).message);
@@ -265,6 +287,8 @@ export default function Page() {
   }
   async function upload(c: Client) {
     setBusy(true);
+    const actor = currentUser.current;
+    changes.current++;
     setError("");
     try {
       if (!configured)
@@ -288,9 +312,8 @@ export default function Page() {
         if (error) throw error;
         files.push({ path: signed.path, name: file.name });
       }
-      setAll(
-        await api("/api/files", { type: "complete", clientId: c.id, files }),
-      );
+      const next = await api("/api/files", { type: "complete", clientId: c.id, files });
+      if (actor === currentUser.current) { changes.current++; setAll(next); }
       setUploadFiles([]);
     } catch (e) {
       setError((e as Error).message);
@@ -365,7 +388,7 @@ export default function Page() {
               {error}
             </p>
           )}
-          {token && <button type="button" className="secondary" onClick={() => void auth!.auth.signOut()}>Sign out</button>}
+          {token && <button type="button" className="secondary" onClick={() => void signOut()}>Sign out</button>}
           <small>
             Access is limited to configured team members. Contact your workspace
             owner if you need an account.
@@ -401,6 +424,8 @@ export default function Page() {
   ) => (
     <button
       className={`nav ${view === v ? "active" : ""}`}
+      aria-label={label}
+      aria-current={view === v ? "page" : undefined}
       onClick={() => {
         setView(v);
         setSelected(null);
@@ -888,7 +913,7 @@ export default function Page() {
                   {configured && (
                     <button
                       className="secondary"
-                      onClick={() => void auth!.auth.signOut()}
+                      onClick={() => void signOut()}
                     >
                       <LogOut size={16} />
                       Sign out
@@ -907,7 +932,7 @@ export default function Page() {
                   </div>
                   <div className="connection-row">
                     <span>Google Form intake</span>
-                    <b>Webhook setup required</b>
+                    <b>{configured && s.clients.some(c => c.sourceId && !c.sourceId.startsWith("sample-")) ? "Intake records received" : "Awaiting intake"}</b>
                   </div>
                   <div className="connection-row">
                     <span>Google Drive edits</span>

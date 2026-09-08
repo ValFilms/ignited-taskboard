@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, X } from "lucide-react";
 import type { Notice } from "../lib/workflow";
+import { notificationQueue } from "../lib/notification-queue";
 
 export default function NotificationToasts({ notices, onOpen }: {
   notices: Notice[]; onOpen: (notice: Notice) => void;
@@ -11,9 +12,7 @@ export default function NotificationToasts({ notices, onOpen }: {
   useEffect(() => {
     const previous = seen.current;
     seen.current = new Set(notices.map(n => n.id));
-    if (!previous) return; // Existing inbox entries stay in the inbox on sign-in.
-    const fresh = notices.filter(n => !n.read && !previous.has(n.id));
-    setItems(current => [...current.filter(n => notices.some(v => v.id === n.id && !v.read)), ...fresh].slice(-3));
+    setItems(current => notificationQueue(notices, previous, current).items);
   }, [notices]);
   return <aside className="notification-toasts" aria-label="New notifications" aria-live="polite" aria-relevant="additions">
     {items.map(n => <div className="notification-toast" key={n.id}>
