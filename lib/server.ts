@@ -33,7 +33,9 @@ export async function readState() {
 export async function mutate(fn: (s: State) => State) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const { state, version } = await readState();
+    const before = JSON.stringify(state);
     const next = fn(state);
+    if (JSON.stringify(next) === before) return next;
     const { data, error } = await admin()
       .from("workspace")
       .update({ data: next, version: version + 1 })

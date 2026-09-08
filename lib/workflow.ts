@@ -106,7 +106,7 @@ export function visibleState(s: State, m: Member): State {
               paymentConfirmed: false,
             },
       ),
-    notifications: s.notifications.filter((n) => n.userId === m.id),
+    notifications: s.notifications.filter((n) => n.userId === m.id && (isOwner(m) || ids.has(n.clientId))),
     events: isOwner(m) ? s.events : [],
   };
 }
@@ -244,16 +244,21 @@ export function transition(
     assert(isOwner(m), "Owners only");
     const u = a.member;
     assert(
-      u && u.id && u.name && ["manager", "editor", "campaign"].includes(u.role),
+      u && typeof u.id === "string" && u.id.trim() && typeof u.name === "string" && u.name.trim() && u.name.length <= 100 && ["manager", "editor", "campaign"].includes(u.role),
       "Invalid member",
     );
     assert(
-      !s.members.some((x) => x.id === u!.id && x.role === "approver"),
+      !s.members.some((x) => x.id === u!.id.trim() && x.role === "approver"),
       "Approver is configured by the administrator",
     );
-    const i = s.members.findIndex((x) => x.id === u!.id);
-    if (i >= 0) s.members[i] = u!;
-    else s.members.push(u!);
+    const i = s.members.findIndex((x) => x.id === u!.id.trim());
+    const normalized = { id: u!.id.trim(), name: u!.name.trim(), role: u!.role };
+    const username = normalized.name.split(/\s+/)[0].toLowerCase();
+    assert(!s.members.some(x => x.id !== normalized.id && x.name.trim().split(/\s+/)[0].toLowerCase() === username), "Choose a unique first name for username sign-in");
+    assert(!s.clients.some(c => c.owner === normalized.id) || isOwner(normalized), "Reassign this member's clients before changing their role");
+    assert(!s.tasks.some(t => t.assignee === normalized.id && t.status !== "done" && (t.kind === "update" ? !isOwner(normalized) : normalized.role !== (t.kind === "edit" ? "editor" : "campaign"))), "Reassign open tasks before changing this member's role");
+    if (i >= 0) s.members[i] = normalized;
+    else s.members.push(normalized);
     return s;
   }
   const c = s.clients.find((c) => c.id === a.clientId);
@@ -280,6 +285,7 @@ export function transition(
         ),
         "Choose a team member with the matching role",
       );
+      if (t!.assignee === a.value) return s;
       t!.assignee = a.value!;
       notice(
         s,
@@ -308,7 +314,11 @@ export function transition(
             t.kind === "update" &&
             t.status !== "done",
         )
-        .forEach((t) => (t.assignee = client.owner));
+        .forEach((t) => {
+          if (t.assignee === client.owner) return;
+          t.assignee = client.owner;
+          notice(s, t.assignee, client.id, `${client.name}: assigned ${t.title}. Deadline unchanged.`, now);
+        });
       break;
     case "check":
       own();
