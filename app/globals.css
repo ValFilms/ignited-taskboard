@@ -1626,6 +1626,10 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .notification-toasts { bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 19; }
   .notification-count { top: 1px; right: 0; }
 }
+@media (min-width: 761px) {
+  .sidebar { height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .sidebar > * { flex-shrink: 0; }
+}
 @media (min-width: 761px) and (max-width: 1100px) {
   .topbar { gap: 12px; }
   .topbar > span { min-width: 0; }
