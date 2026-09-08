@@ -13,6 +13,17 @@
   --display: "Archivo Expanded", "Archivo", sans-serif;
   --mono: "JetBrains Mono", monospace;
 }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #24211e;
+  --muted: #67615a;
+  --line: rgba(45, 34, 24, 0.17);
+  --accent-hover: #e85215;
+  --dark: #f5f2ed;
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --raised: #eee9e2;
+}
 * {
   box-sizing: border-box;
 }
@@ -1473,6 +1484,31 @@ h2, h3 { font-weight: 800; }
 .toast-open span { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .toast-open small { font-size: 12px; color: var(--accent-hover); margin-top: 8px; }
 .notification-toast .icon-button { flex-shrink: 0; }
+.theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 40px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px;
+  color: var(--ink); background: var(--surface); font-size: 0.8rem; white-space: nowrap; }
+.theme-toggle:hover { background: var(--raised); }
+.theme-toggle svg { flex-shrink: 0; }
+.login-appearance { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+.appearance-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border-top: 1px solid var(--line); padding-top: 18px; margin-bottom: 24px; font-size: 0.875rem; }
+:root[data-theme="light"] .column-cards { border-color: var(--line); }
+:root[data-theme="light"] .brand { color: var(--ink); }
+:root[data-theme="light"] :is(.client-mark, .mark-1, .mark-2, .mark-3, .avatar, .card-status, .badge,
+  .stat-icon, .stat-icon.green, .stat-icon.purple, .task-symbol, .task-symbol.purple) { color: #a4380b; background: #fff0e5; }
+:root[data-theme="light"] :is(.eyebrow, .login-art .eyebrow, .login-art h1 em, .toast-open small) { color: #aa390a; }
+:root[data-theme="light"] :is(.card-status.review, .revision-note) { color: #6040a0; background: #f2edff; }
+:root[data-theme="light"] .error { color: #a12620; background: #fff0ed; border-color: #d8857c; }
+:root[data-theme="light"] .notification-toast { box-shadow: 0 12px 40px #30201420; }
+:root[data-theme="light"] .login-art { background-image: radial-gradient(ellipse at 10% 85%, #f2601f18, transparent 60%),
+  linear-gradient(#34271906 1px, transparent 1px), linear-gradient(90deg, #34271906 1px, transparent 1px); }
+@media (max-width: 760px) {
+  .topbar .theme-toggle { width: 38px; min-height: 38px; padding: 8px; }
+  .topbar .theme-toggle span { display: none; }
+  .topbar > span { min-width: 0; overflow: hidden; white-space: nowrap; }
+  .topbar > span strong { overflow: hidden; text-overflow: ellipsis; }
+  .topbar > div { flex-shrink: 0; }
+}
 @media (max-width: 760px) { .notification-toasts { bottom: 16px; right: 16px; } }
 @media (prefers-reduced-motion: reduce) {
   * {

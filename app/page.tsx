@@ -38,6 +38,7 @@ import {
 import { demoState } from "../lib/demo";
 import NotificationToasts from "./notification-toasts";
 import { authenticatedRequest } from "../lib/auth-request";
+import ThemeToggle from "./theme-toggle";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -355,6 +356,7 @@ export default function Page() {
           <span>IGNITED CONTENT CO. / INTERNAL</span>
         </div>
         <form onSubmit={signIn}>
+          <div className="login-appearance"><ThemeToggle /></div>
           <p className="eyebrow">WELCOME BACK</p>
           <h2>Let’s move things forward.</h2>
           <p className="muted">Sign in with your team account.</p>
@@ -553,6 +555,7 @@ export default function Page() {
                 day: "numeric",
               })}
             </span>
+            <ThemeToggle />
             <button
               className="icon-button notification-bell"
               aria-label={`Open notifications, ${s.notifications.filter(n => !n.read).length} unread`}
@@ -919,6 +922,7 @@ export default function Page() {
                       Sign out
                     </button>
                   )}
+                  <div className="appearance-setting"><span>Appearance</span><ThemeToggle /></div>
                 </div>
               </section>
               <section className="panel">
