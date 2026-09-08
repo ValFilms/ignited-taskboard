@@ -1,73 +1,107 @@
-# Working on Ignited taskboard
+# Numbered releases for Ignited taskboard
 
 Read `README.md` and `SPEC.md` before changing behavior. The repository is
-`ValFilms/ignited-taskboard`; Vercel deploys `main` to production at
-https://ignited-taskboard.vercel.app.
+`ValFilms/ignited-taskboard`. Vercel deploys `main` to production at
+https://ignited-taskboard.vercel.app. The version endpoint is `/api/version`.
 
-## Team workflow
+## The owner's interaction
 
-- The owners want to request changes in plain language. Handle Git, checks,
-  previews, and release steps for them; do not ask them to create branches or
-  operate GitHub manually.
-- Either collaborator may prepare and publish their work. Do not introduce a
-  requirement for the other person's approval. Publishing still requires the
-  requesting user's explicit instruction, such as "publish" or "go live".
-- Before work, inspect the working tree and fetch `origin`. Preserve uncommitted
-  work. Start each unrelated change from current `origin/main` in its own
-  `codex/<short-description>` branch and separate checkout/worktree when needed.
-  Never share a mutable working branch between concurrent tasks.
-- Check `gh api user` and the repository's Git author identity. Use the requesting
-  collaborator's own identity, with repository-local configuration when needed.
-  Never use the partner's identity to bypass a deployment permission problem.
-- Commit small, coherent changes with useful messages. Push the working branch
-  when the requested change is ready. A pull request can record the summary and
-  checks, but is not a request for mandatory partner approval. Do not enable
-  auto-merge while waiting for the user's publishing instruction.
-- Never force-push a shared branch, discard someone else's changes, or push to
-  `main` during ordinary editing. Resolve understandable conflicts while
-  preserving both people's intent; ask when the intended behavior is ambiguous.
+Handle Git, version numbers, validation, and deployment automatically. The owners
+want this conversation:
 
-## Validation and preview
+- Before changing the app: **"Staging v8 now."** Say which version is still live
+  only when it has been verified. Use the actual reserved number, not this example.
+- When ready: **"v8 is staged and checked. Say go live when you're ready."**
+- After "go live" and a verified deployment: **"v8 is live."**
+- For "revert to v7": restore the **whole saved v7 app snapshot**, validate it,
+  publish it, and report **"v7 is live again"** only after verification.
 
-- Use Node 24 and `npm ci`. Run `npm run check` before presenting a release
-  candidate. It runs the tests, TypeScript validation, and production build.
-- `.github/workflows/checks.yml` runs the same checks on pushes and pull requests.
-  Confirm the results correspond to the current commit, not an earlier version.
-- Fetch and incorporate any newer `origin/main` changes into the working branch
-  before final validation. Re-run affected checks after conflict resolutions.
-- Show the user the change summary, test results, and a local demo or verified
-  Vercel Preview URL for this commit. A successful build is not proof that the
-  live integrations have been tested.
-- Without Supabase configuration the app provides a fictional demo. Prefer this
-  or a dedicated staging Supabase project for previews. A Vercel Preview may
-  still share production data if its environment variables point there; verify
-  this before exercising state-changing actions. Never test against real clients
-  or copy production secrets into previews just to make tests pass.
-- Keep credentials out of source and logs. Do not change Supabase data/schema,
-  Google intake triggers, external schedulers, or team accounts as a side effect
-  of routine code changes.
+"Revert to v7" is an explicit instruction to publish that saved version; do not
+ask for a second "go live" instruction. It takes all newer app changes out of the
+live version while retaining their commits and saved versions. Do not interpret
+this request as selectively undoing the user's latest change. Either collaborator
+may release; no approval from the other person is required.
 
-## Publish after the user's instruction
+## Starting and continuing work
 
-1. Fetch `origin` again. The release candidate must contain current `origin/main`.
-   If the partner has published since the preview, incorporate those changes,
-   check the combined result, and explain any material difference. If it changes
-   what the user confirmed, show the updated preview before releasing it.
-2. Run `npm run check` for that candidate and verify its GitHub checks. Do not
-   publish with failed, missing, or still-running checks. Record the tested commit
-   SHA and previous production SHA.
-3. Publish the exact tested commit with a normal fast-forward push to `main`
-   (for example, `git push origin <tested-sha>:refs/heads/main`). This preserves
-   both contributors' history. If Git rejects it because `main` advanced, fetch,
-   incorporate the new work, and repeat validation. Never force the push.
-4. Wait for Vercel's Production deployment for that exact commit. Verify its
-   success and check the live URL before reporting it live. If deployment fails,
-   report the failure; a Git push alone is not a successful release.
-5. Summarize what shipped and link the commits/deployment. For a requested rollback,
-   prefer reverting the relevant change with a new commit and checking the result
-   so unrelated work remains intact. Do not rewrite shared history.
+1. Check the working tree, `gh api user`, and the repository-local Git author
+   identity. Use the requesting collaborator's own account. Preserve uncommitted
+   work and never impersonate the partner to bypass deployment permissions.
+2. Run `npm run versions -- history` to inspect saved/staged versions and the live
+   endpoint. A failed endpoint lookup means live status is unknown, not v0 or v1.
+3. For a new task, run `npm run versions -- stage <description>` from a clean
+   checkout/worktree. It fetches current `origin/main`, reserves the next shared
+   number in `staging/vN`, creates a separate branch, and commits `release.json`.
+   Announce the returned staging number before editing feature code.
+4. To adopt already-prepared work on a separate branch, use `stage --current`.
+   Continuing the same unshipped batch retains its number. Use separate worktrees
+   for concurrent tasks; never share a mutable branch. Numbers are never reused,
+   including after an abandoned stage or rollback.
+5. Make coherent commits and push only the working branch during staging. A pull
+   request is optional history, not a mandatory partner-approval step. Never turn
+   on auto-merge while waiting for the user's "go live" instruction.
 
-These instructions coordinate agent behavior; they do not enforce repository
-permissions. GitHub checks alone do not stop a direct push from deploying on
-Vercel. Enforcing checks for all contributors requires repository rules configured
-by an administrator; it does not require human approval rules.
+Reservations prevent the two collaborators from independently claiming the same
+number. Do not move/delete reservation tags or saved `vN` tags. They are the shared
+release record. Do not manually invent a live version or change `release.json`
+outside the release workflow.
+
+## Validate and show staging
+
+- Use Node 24 (`.nvmrc`), `npm ci`, and `npm run check`. GitHub Actions runs the
+  same tests, TypeScript validation, and production build for pushed branches.
+- Before final validation, fetch and incorporate newer `origin/main` changes.
+  Retain the candidate's own `release.json` number when merging the partner's
+  version marker. Resolve conflicts while preserving both people's intended work;
+  ask if the intended behavior is ambiguous.
+- Run `npm run versions -- candidate`. It rejects stale candidates, changes to
+  saved snapshots, and an older staging number after a newer version has shipped.
+  If the number is stale, use `stage --current --new`, announce the new number,
+  and validate it. Do not silently renumber a preview already confirmed by the user.
+- Show the change summary, test results, and a verified preview for the candidate
+  commit. Check `/api/version`: the staging number must match. Preview is not live.
+- Use the fictional demo or a dedicated staging Supabase project for test edits.
+  A Vercel Preview can still share production data through its environment variables.
+  Do not test on real clients, copy production secrets, change SQL/schema, or alter
+  Google intake, schedulers, or team accounts as a side effect of code work.
+
+## Go live
+
+1. Require the user's "go live" / "publish" instruction for the staged version.
+2. Fetch again, include the partner's latest work, and run
+   `npm run versions -- candidate`. If the combined app materially differs from
+   what the user confirmed, present the updated staging result before release.
+   Run `npm run check` and confirm successful GitHub checks for the exact SHA.
+3. Fast-forward `main` to that exact tested commit with a normal push, such as
+   `git push origin <tested-sha>:refs/heads/main`. If main advanced concurrently,
+   fetch, combine, and validate again. Never force-push or reset shared history.
+4. Wait for Vercel's successful Production deployment for that SHA. Check the
+   actual live URL and run `npm run versions -- record vN`. This verifies that
+   `/api/version` reports that version, commit, and production environment before
+   creating the immutable saved `vN` tag. A successful Git push alone is not live.
+5. Report the version now live and link its saved snapshot. If deployment or
+   recording fails, say which step failed; keep the same staging number for fixes
+   until it has actually been saved. Never pretend a failed release is restorable.
+
+## Revert to a numbered version
+
+1. On the user's instruction "revert to vN", run `npm run versions -- restore vN`
+   from a clean checkout. This creates a separate branch with a new commit whose
+   full file tree matches the saved version and whose parent is current main.
+   Newer commits remain in history. Announce the target version before proceeding.
+2. Validate that snapshot and its compatibility with the current data/schema. No
+   database restoration or destructive migration is implied. Push the restore
+   branch and verify its checks before advancing main.
+3. If the partner changes main meanwhile, regenerate the restore candidate from
+   the saved version with the new main as parent. Do not merge newer app contents
+   into the restore snapshot, since that would no longer be the requested version.
+4. Run `candidate`, publish the exact tested commit with a normal fast-forward,
+   and wait for Vercel. Run `record vN` to verify the restored live app. The saved
+   tag stays on its original snapshot; the restore commit is a new history entry.
+   The next new stage uses a number above all earlier reservations/releases.
+
+The helper intentionally never pushes to main or deploys by itself. The agent
+performs those steps only for the user's go-live or numbered-revert instruction.
+GitHub checks do not themselves block direct pushes from triggering Vercel;
+enforcing checks for every contributor requires administrator-configured rules,
+which need not require human approval. Vercel access remains separate from GitHub.
