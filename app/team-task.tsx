@@ -20,7 +20,7 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
     {taskId && !task ? <p role="status">This task is no longer available to your account. It may have been reassigned.</p> : task ? <>
       <span className="badge">{task.status === "done" ? "Completed" : "Open"}</span>
       <h3 className="task-title">{task.title}</h3>
-      <p className="muted">Created by {name(task.createdBy)} · {state.clients.find(c => c.id === task.clientId)?.name || "General team task"}</p>
+      <p className="muted">{task.campaignTaskId ? "Automatically created after campaign setup" : `Created by ${name(task.createdBy)}`} · {state.clients.find(c => c.id === task.clientId)?.name || "General team task"}</p>
       <p className="task-notes">{task.notes || "No additional notes."}</p>
       <p>Due: {task.dueAt ? new Date(task.dueAt).toLocaleString() : "No deadline"}</p>
       {task.completedAt && <p>Completed: {new Date(task.completedAt).toLocaleString()}</p>}

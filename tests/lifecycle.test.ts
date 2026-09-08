@@ -26,6 +26,8 @@ test('complete lifecycle: intake, onboarding, footage, revision, approval, campa
   const campaign=s.tasks.find(t=>t.kind==='campaign')!;assert.equal(campaign.assignee,'carl');assert.equal(Date.parse(campaign.dueAt!),now+28*hour);
   assert.throws(()=>act(0,{type:'approve',taskId:editId}));
   act(3,{type:'campaign',taskId:campaign.id},now+5*hour);assert.equal(client().stage,'Ready to launch');
+  const closebot=s.tasks.find(t=>t.campaignTaskId===campaign.id)!;assert.equal(closebot.assignee,'yaniv');
+  act(1,{type:'completeTask',taskId:closebot.id},now+5*hour);assert.equal(s.tasks.find(t=>t.id===closebot.id)!.status,'done');
   for(const key of ['launchCall','paymentConfirmed'])act(1,{type:'launchCheck',key});
   act(0,{type:'launch'},now+6*hour);assert.equal(client().stage,'Trial');assert.equal(Date.parse(client().trialEnd!),now+342*hour);
   tick(s,now+270*hour-1);assert.equal(s.notifications.filter(n=>n.id.includes(':trial:')).length,0);
@@ -35,7 +37,7 @@ test('complete lifecycle: intake, onboarding, footage, revision, approval, campa
   act(0,{type:'update',taskId:updates[0].id,value:'Results shared with client'},now+403*hour);assert.equal(s.tasks.at(-1)!.status,'done');
   tick(s,now+486*hour);updates=s.tasks.filter(t=>t.kind==='update');assert.equal(updates.length,2);
   act(1,{type:'close'},now+487*hour);assert.equal(client().stage,'Closed');assert(s.tasks.every(t=>t.status==='done'&&!t.dueAt));
-  const count=s.notifications.length;tick(s,now+1000*hour);assert.equal(s.notifications.length,count);assert.equal(s.tasks.length,4);assert(s.events.length>=17);
+  const count=s.notifications.length;tick(s,now+1000*hour);assert.equal(s.notifications.length,count);assert.equal(s.tasks.length,5);assert(s.events.length>=17);
 });
 for(const type of ['profile','owner','check','onboard','raw','launchCheck','launch','continue','close','reassign','member'])for(const index of [2,3])test(`${type} rejects ${index===2?'editor':'campaign'} owner privileges`,()=>{
   const s=demoState(),before=structuredClone(s);assert.throws(()=>transition(s,s.members[index],{type,clientId:'demo-5',taskId:'edit-1',value:'owner',key:checklist[0],member:{id:'test',name:'Test',role:'manager'}},now),/Owners only/);assert.deepEqual(s,before);

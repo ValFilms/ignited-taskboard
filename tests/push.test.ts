@@ -80,6 +80,21 @@ test("Push API and sender regression use isolated transports", async t => {
       assert(!JSON.stringify(sends[0].payload).includes("Private client"));
       assert.equal(state.pushQueue!.length, 0); const visible = await response.json(); assert(!visible.pushDevices); assert(!visible.pushQueue);
     });
+    await t.test("Campaign completion persists the Closebot task and pushes its notification to Yaniv", async () => {
+      reset(); state = demoState(); addDevice(state, "yaniv", subscription);
+      const response = await workspace.POST(req({ type: "campaign", clientId: "demo-2", taskId: "campaign-2" }, "carl"));
+      assert.equal(response.status, 200);
+      const task = state.tasks.find(t => t.campaignTaskId === "campaign-2")!;
+      assert.equal(task.assignee, "yaniv");
+      const notice = state.notifications.find(n => n.taskId === task.id)!;
+      assert(sends.some(s => s.payload.tag === notice.id));
+      assert(sends.every(s => s.endpoint === subscription.endpoint));
+      assert.equal(state.pushQueue!.length, 0);
+      const sent = sends.length;
+      assert.equal((await workspace.POST(req({ type: "campaign", clientId: "demo-2", taskId: "campaign-2" }, "carl"))).status, 400);
+      assert.equal(sends.length, sent);
+      assert.equal(state.tasks.filter(t => t.campaignTaskId === "campaign-2").length, 1);
+    });
     await t.test("Failed push does not fail saved tasks; retry eventually drains the queue", async () => {
       reset(); addDevice(state, "owner", subscription); outcome = 503;
       assert.equal((await workspace.POST(req({ type: "createTask", task: { title: "Retry me", assignee: "owner" } }, "carl"))).status, 200);

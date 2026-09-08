@@ -17,6 +17,7 @@ export type Task = {
   title: string;
   kind: "edit" | "campaign" | "update" | "custom";
   createdBy?: string;
+  campaignTaskId?: string;
   completedAt?: string;
   assignee: string;
   status: "open" | "review" | "done";
@@ -476,6 +477,20 @@ export function transition(
       t!.status = "done";
       t!.dueAt = null;
       client.stage = "Ready to launch";
+      if (!s.tasks.some(task => task.campaignTaskId === t!.id)) {
+        const candidates = s.members.filter(u => u.name.trim().split(/\s+/)[0].toLowerCase() === "yaniv");
+        assert(candidates.length === 1, "Configure one team member named Yaniv before completing campaign setup.");
+        const integration: Task = {
+          id: crypto.randomUUID(), clientId: client.id, kind: "custom",
+          campaignTaskId: t!.id, createdBy: client.owner, assignee: candidates[0].id,
+          title: "Integrate Closebot with GHL and Facebook",
+          notes: "Connect Closebot to this client's GHL subaccount and Facebook account. Verify both connections and the lead flow, then mark this task complete.",
+          status: "open", createdAt: iso(now), dueAt: null, cycle: 0,
+        };
+        s.tasks.push(integration);
+        notice(s, integration.assignee, client.id, `${client.name}: ${integration.title}`, now,
+          `campaign-closebot:${t!.id}`, integration.id);
+      }
       for (const u of owners(s))
         notice(
           s,

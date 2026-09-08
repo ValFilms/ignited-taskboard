@@ -1351,11 +1351,10 @@ export default function Page() {
                         )}
                       </>
                     )}
-                    {t.kind === "campaign" &&
-                      t.assignee === me.id &&
-                      action("campaign", "Mark campaign setup complete", {
-                        taskId: t.id,
-                      })}
+                    {t.kind === "campaign" && t.assignee === me.id && <>
+                      <p className="muted">Completing setup assigns Yaniv a task to integrate Closebot with GHL and Facebook.</p>
+                      {action("campaign", "Mark campaign setup complete", { taskId: t.id })}
+                    </>}
                     {t.kind === "update" && t.assignee === me.id && (
                       <>
                         <label>
