@@ -1570,6 +1570,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .topbar .profile-popover .theme-toggle { display: flex; width: 100%; min-height: 44px; padding: 12px; }
   .topbar .profile-popover .theme-toggle span { display: inline; }
   .icon-button, .text-button, .theme-toggle { min-height: 44px; min-width: 44px; }
+  .primary, .secondary, .file-link { min-height: 44px; }
   .profile-trigger { min-width: 48px; }
   .demo-banner { flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px; }
   .demo-banner b { display: inline; }
@@ -1624,4 +1625,10 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .push-actions > button { width: 100%; justify-content: center; }
   .notification-toasts { bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 19; }
   .notification-count { top: 1px; right: 0; }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .topbar { gap: 12px; }
+  .topbar > span { min-width: 0; }
+  .topbar > div { flex-shrink: 0; gap: 12px; }
+  .topbar .today { display: none; }
 }
