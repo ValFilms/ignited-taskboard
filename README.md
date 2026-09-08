@@ -2,9 +2,19 @@
 
 Next.js app for Ignited Content Co. See [SPEC.md](SPEC.md) for workflow and access rules.
 
+## Working together
+
+Describe changes to Codex, check the preview, then say **publish** when ready.
+The shared [agent instructions](AGENTS.md) handle branches, attribution, checks,
+and the existing Vercel release process. See [Making changes together](docs/COLLABORATION.md)
+for the two-person workflow. No partner approval is required.
+
 ## Run
 
-Node 24, npm. `npm ci`, `npm run dev`. `npm test` checks permissions and state transitions; `npm run build` includes TypeScript validation.
+Node 24, npm. `npm ci`, `npm run dev`. `npm run check` runs tests, TypeScript
+validation, and a production build. GitHub Actions runs this same command on
+pushes and pull requests. `npm test` checks permissions and state transitions;
+`npm run build` includes TypeScript validation.
 
 ## Activate the private workspace
 
