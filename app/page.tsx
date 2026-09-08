@@ -422,6 +422,7 @@ export default function Page() {
   const clients = s.clients.filter(
     (c) =>
       (ownerFilter === "all" || c.owner === ownerFilter) &&
+      (stageFilter === "all" || c.stage === stageFilter || stageFilter === "production" && ["Filming", "Editing", "In review", "Campaign setup"].includes(c.stage)) &&
       `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
   );
   const current = s.clients.find((c) => c.id === selected);
@@ -1517,7 +1518,7 @@ export default function Page() {
           </section>
         </div>
       )}
-      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} />}
+      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} />}
       <NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />
     </div>
   );

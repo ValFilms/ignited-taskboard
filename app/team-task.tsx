@@ -4,8 +4,8 @@ import type { Action, Member, State, Task } from "../lib/workflow";
 import { isOwner } from "../lib/workflow";
 import Dialog from "./dialog";
 
-export default function TeamTask({ state, me, task, clientId = "", act, onClose, error }: {
-  state: State; me: Member; task?: Task; clientId?: string; act: (action: Action) => Promise<boolean>; onClose: () => void; error?: string;
+export default function TeamTask({ state, me, task, taskId, clientId = "", act, onClose, error }: {
+  state: State; me: Member; task?: Task; taskId?: string; clientId?: string; act: (action: Action) => Promise<boolean>; onClose: () => void; error?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -15,9 +15,9 @@ export default function TeamTask({ state, me, task, clientId = "", act, onClose,
     finally { setBusy(false); }
   };
   const name = (id?: string) => state.members.find(m => m.id === id)?.name || "Team member";
-  return <Dialog title={task ? "Task details" : "New task"} onClose={onClose}>
+  return <Dialog title={taskId ? "Task details" : "New task"} onClose={onClose}>
     {failed && <p className="error" role="alert">{error || "Could not save. Check your connection and the task details, then try again."}</p>}
-    {task ? <>
+    {taskId && !task ? <p role="status">This task is no longer available to your account. It may have been reassigned.</p> : task ? <>
       <span className="badge">{task.status === "done" ? "Completed" : "Open"}</span>
       <h3 className="task-title">{task.title}</h3>
       <p className="muted">Created by {name(task.createdBy)} · {state.clients.find(c => c.id === task.clientId)?.name || "General team task"}</p>
