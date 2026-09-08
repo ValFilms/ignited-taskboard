@@ -1571,31 +1571,52 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .topbar .profile-popover .theme-toggle span { display: inline; }
   .icon-button, .text-button, .theme-toggle { min-height: 44px; min-width: 44px; }
   .profile-trigger { min-width: 48px; }
-  .demo-banner { flex-wrap: wrap; gap: 8px; }
-  .demo-banner label { margin: 0; }
-  .content { padding: 24px 16px; }
+  .demo-banner { flex-wrap: wrap; gap: 4px 12px; padding: 8px 14px; }
+  .demo-banner b { display: inline; }
+  .demo-banner label { margin: 0; flex-direction: row; align-items: center; gap: 8px; }
+  .demo-banner select { padding-block: 4px; }
+  .content { padding: 18px 14px; }
+  .page-heading { margin-bottom: 16px; }
+  .page-heading h1 { font-size: 1.4rem; line-height: 1.2; margin-bottom: 6px; }
+  .page-heading .eyebrow { margin-bottom: 8px; }
+  .page-heading .muted { font-size: .8rem; line-height: 1.5; }
   input, select, textarea { font-size: 16px !important; min-height: 44px; max-width: 100%; }
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .filters .search { grid-column: 1 / -1; grid-row: 1; margin: 0; width: 100%; }
   .filters select { width: 100%; min-width: 0; }
-  .board { display: flex; flex-direction: column; gap: 22px; overflow: visible; margin: 0; padding: 0; }
+  .board-toolbar { gap: 6px; margin-bottom: 16px; }
+  .filters { margin-bottom: 10px; }
+  .board { display: flex; flex-direction: column; gap: 16px; overflow: visible; margin: 0; padding: 0; }
   .column { width: 100%; min-width: 0; }
+  .column-heading { padding-bottom: 10px; }
   .column-cards { min-height: 0; }
-  .client-card { width: 100%; }
-  .stats > button { padding: 16px 12px; }
+  .client-card { width: 100%; padding: 12px; }
+  .client-card:last-child { margin-bottom: 0; }
+  .card-top { margin-bottom: 10px; }
+  .client-mark { width: 28px; height: 28px; font-size: .7rem; }
+  .client-card h3 { font-size: .95rem; margin-bottom: 3px; }
+  .client-card p { margin-bottom: 10px; }
+  .card-status { margin-bottom: 10px; padding: 4px 6px; }
+  .card-footer { padding-top: 9px; }
+  .stats { gap: 8px; margin-bottom: 16px; }
+  .stats > button { padding: 12px; }
   .stats > button > span:first-child { font-size: .8rem; }
-  .task-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 18px; width: 100%; padding: 16px 12px; }
+  .stats strong { font-size: 1.4rem; margin-top: 6px; }
+  .stats strong small { margin-top: 4px; line-height: 1.3; }
+  .task-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) 18px; width: 100%; padding: 12px; gap: 6px 10px; }
+  .task-symbol { padding: 7px; }
   .task-row .task-date { grid-column: 2; grid-row: 2; margin: 0; }
   .task-row > svg { grid-column: 3; grid-row: 1; }
-  .task-row strong { font-size: .95rem; }
+  .task-row strong { font-size: .875rem; }
   .task-filters { padding: 12px; gap: 6px; }
   .task-filters button { flex: 1 0 auto; }
-  .panel-heading { flex-wrap: wrap; gap: 12px; }
+  .panel-heading { flex-wrap: wrap; gap: 8px; padding: 14px; }
   .panel-heading h2 { font-size: .9rem; }
   .panel-heading .primary { padding: 10px 12px; }
-  .settings-body { padding: 20px; }
+  .settings-body { padding: 16px; }
   .drawer { width: 100%; height: 100dvh; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
-  .drawer-body, .drawer-heading { padding: 22px 18px; }
+  .drawer-body, .drawer-heading { padding: 16px; }
+  .drawer-heading h2, .task-title { font-size: 1.25rem; }
   .detail-grid { grid-template-columns: 1fr; }
   .task-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
   .dialog-body { padding: 20px 16px max(20px, env(safe-area-inset-bottom)); }
