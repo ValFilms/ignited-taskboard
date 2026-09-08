@@ -2,9 +2,22 @@
 
 Next.js app for Ignited Content Co. See [SPEC.md](SPEC.md) for workflow and access rules.
 
+## Working together
+
+Describe changes to Codex. It announces **Staging vN** before editing and provides
+a preview link for you to test. Say **go live** after testing to publish that exact
+version, or **revert to vN** to restore a saved app version. The shared
+[agent instructions](AGENTS.md) handle version numbers, branches, attribution,
+checks, and Vercel releases. See [Staging and version history](docs/COLLABORATION.md)
+for the two-person workflow. No partner approval is required.
+`npm run versions -- history` lists the numbered versions and checks the live version.
+
 ## Run
 
-Node 24, npm. `npm ci`, `npm run dev`. `npm test` checks permissions and state transitions; `npm run build` includes TypeScript validation.
+Node 24, npm. `npm ci`, `npm run dev`. `npm run check` runs tests, TypeScript
+validation, and a production build. GitHub Actions runs this same command on
+pushes and pull requests. `npm test` checks permissions and state transitions;
+`npm run build` includes TypeScript validation.
 
 ## Activate the private workspace
 
