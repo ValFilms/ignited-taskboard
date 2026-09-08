@@ -8,8 +8,8 @@ Codex. The shared `AGENTS.md` tells Codex how to handle the steps automatically.
 | You say | Codex does |
 | --- | --- |
 | "Add a calendar" | Announces "Staging v8 now", using the actual next number, then prepares the change separately. |
-| "Change the colours too" | Continues that staged version and shows the updated result. |
-| "Go live" | Checks the combined code and publishes the staged version. Reports "v8 is live" after verifying it. |
+| "Change the colours too" | Continues that staged version and provides an updated preview link to test. |
+| "Go live" | Publishes the exact code shown in the confirmed preview after the checks pass. Reports "v8 is live" after verifying it. |
 | "Revert to v7" | Restores the complete saved v7 app, checks and publishes it, then confirms "v7 is live again". |
 | "Show version history" | Lists staged and saved versions and checks which version is currently live. |
 
@@ -20,6 +20,27 @@ Creating a staging version does not change the live app.
 No approval from the other partner is required. "Go live" authorizes a staged
 release. "Revert to v7" authorizes restoring that saved release without needing a
 second "go live" command.
+
+## Try the staging version before publishing
+
+Each staged version must have a working preview link where both owners can open
+the app, try the changes, and request fixes. Codex provides that link with the
+version number, a short change summary, and the automated check results. When you
+have tested it and are happy, say **go live**. Either owner can confirm the release.
+
+The shared link identifies the exact deployment you were shown. If code changes
+after that preview, including new partner changes, Codex provides an updated
+preview and waits for your confirmation of that version before publishing.
+Automated tests alone do not replace your chance to try the app.
+
+Test edits use fictional demo data or a separate staging database. Demo mode can
+exercise interface and workflow changes, but real sign-in and file upload testing
+requires a separate configured test workspace. A separate preview URL by itself
+does not isolate client data. Codex reports which testing mode is available.
+
+Vercel creates these previews from staging-branch pushes. See its documentation on
+[Preview environments](https://vercel.com/docs/deployments/environments#preview-environment-pre-production)
+and [deployment URLs](https://vercel.com/docs/deployments/generated-urls).
 
 ## What a saved version means
 

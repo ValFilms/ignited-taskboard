@@ -4,8 +4,9 @@ Next.js app for Ignited Content Co. See [SPEC.md](SPEC.md) for workflow and acce
 
 ## Working together
 
-Describe changes to Codex. It announces **Staging vN** before editing; say **go live**
-when ready, or **revert to vN** to restore a saved app version. The shared
+Describe changes to Codex. It announces **Staging vN** before editing and provides
+a preview link for you to test. Say **go live** after testing to publish that exact
+version, or **revert to vN** to restore a saved app version. The shared
 [agent instructions](AGENTS.md) handle version numbers, branches, attribution,
 checks, and Vercel releases. See [Staging and version history](docs/COLLABORATION.md)
 for the two-person workflow. No partner approval is required.

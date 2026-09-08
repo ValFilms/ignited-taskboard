@@ -11,7 +11,8 @@ want this conversation:
 
 - Before changing the app: **"Staging v8 now."** Say which version is still live
   only when it has been verified. Use the actual reserved number, not this example.
-- When ready: **"v8 is staged and checked. Say go live when you're ready."**
+- When the preview is verified: **"v8 is ready to test: [preview link]. Try it,
+  then say go live when you're ready."** Include the actual preview URL.
 - After "go live" and a verified deployment: **"v8 is live."**
 - For "revert to v7": restore the **whole saved v7 app snapshot**, validate it,
   publish it, and report **"v7 is live again"** only after verification.
@@ -58,8 +59,16 @@ outside the release workflow.
   saved snapshots, and an older staging number after a newer version has shipped.
   If the number is stale, use `stage --current --new`, announce the new number,
   and validate it. Do not silently renumber a preview already confirmed by the user.
-- Show the change summary, test results, and a verified preview for the candidate
-  commit. Check `/api/version`: the staging number must match. Preview is not live.
+- Push the staging branch to create its Vercel Preview, wait for deployment, and
+  provide its deployment-specific URL so both owners can open and test the exact
+  candidate. A moving branch URL alone does not identify what the owner tested.
+  Verify `/api/version` reports the candidate's version and full commit SHA with
+  environment `preview`. Include the version, preview URL, commit, change summary,
+  and test results in the handoff. Verify the owners can access the protected
+  preview; do not disable protection to work around missing access.
+- Passing automated checks alone does not mean the preview is ready to test. If
+  deployment, access, or test-data setup is blocked, report that blocker and do
+  not request go-live confirmation until a working preview has been provided.
 - Use the fictional demo or a dedicated staging Supabase project for test edits.
   A Vercel Preview can still share production data through its environment variables.
   Do not test on real clients, copy production secrets, change SQL/schema, or alter
@@ -67,10 +76,14 @@ outside the release workflow.
 
 ## Go live
 
-1. Require the user's "go live" / "publish" instruction for the staged version.
+1. Require the user's "go live" / "publish" instruction after presenting the
+   verified preview. That instruction confirms the exact candidate commit shown
+   for testing; no approval from the other partner is required.
 2. Fetch again, include the partner's latest work, and run
-   `npm run versions -- candidate`. If the combined app materially differs from
-   what the user confirmed, present the updated staging result before release.
+   `npm run versions -- candidate`. If the candidate commit differs from the
+   preview the user confirmed, deploy and verify its updated preview, show it for
+   testing, and wait for a new go-live instruction before release. This includes
+   partner changes merged after the original preview was presented.
    Run `npm run check` and confirm successful GitHub checks for the exact SHA.
 3. Fast-forward `main` to that exact tested commit with a normal push, such as
    `git push origin <tested-sha>:refs/heads/main`. If main advanced concurrently,
