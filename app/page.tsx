@@ -518,9 +518,9 @@ export default function Page() {
           <>
             <div className="nav-rule" />
             {nav("sales", "Sales", <Users size={19} />)}
-            {nav("settings", "Settings", <Settings size={19} />)}
           </>
         )}
+        {nav("settings", "Settings", <Settings size={19} />)}
         <div className="sidebar-bottom">
           <div className="status-dot" />{" "}
           {configured ? "Private workspace" : "Sample workspace"}
