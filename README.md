@@ -12,6 +12,12 @@ checks, and Vercel releases. See [Staging and version history](docs/COLLABORATIO
 for the two-person workflow. No partner approval is required.
 `npm run versions -- history` lists the numbered versions and checks the live version.
 
+This project's authorized GitHub account is **ValFilms**. Run
+`npm run github -- setup` once per clone and after helper updates, then use
+`git github ...` for GitHub commands. The local helper pins Git fetch/push and new
+commit identity to that account without changing another project's or Claude's
+shared login. `git github identity` verifies it. See [account setup](docs/COLLABORATION.md#project-specific-github-account).
+
 ## Run
 
 Node 24, npm. `npm ci`, `npm run dev`. `npm run check` runs tests, TypeScript

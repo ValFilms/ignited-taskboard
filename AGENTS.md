@@ -25,9 +25,10 @@ may release; no approval from the other person is required.
 
 ## Starting and continuing work
 
-1. Check the working tree, `gh api user`, and the repository-local Git author
-   identity. Use the requesting collaborator's own account. Preserve uncommitted
-   work and never impersonate the partner to bypass deployment permissions.
+1. Check the working tree and project account using `git github identity`.
+   For this project the owners authorized the actual **ValFilms** account.
+   Follow the account-isolation rules below. Preserve uncommitted work and all
+   existing commit authorship.
 2. Run `npm run versions -- history` to inspect saved/staged versions and the live
    endpoint. A failed endpoint lookup means live status is unknown, not v0 or v1.
 3. For a new task, run `npm run versions -- stage <description>` from a clean
@@ -118,3 +119,31 @@ performs those steps only for the user's go-live or numbered-revert instruction.
 GitHub checks do not themselves block direct pushes from triggering Vercel;
 enforcing checks for every contributor requires administrator-configured rules,
 which need not require human approval. Vercel access remains separate from GitHub.
+
+## Project account isolation — applies to Codex and Claude Code
+
+- This repository uses the authorized **ValFilms** GitHub account. Other projects
+  and Claude sessions must keep their existing accounts and settings.
+- On a new clone, or after the account helper changes, run `npm run github -- setup`.
+  It verifies the saved ValFilms credential against GitHub before installing a
+  repository-local Git alias, credential helper, and author identity. It does not
+  log in, switch accounts, or write global Git/GitHub settings. Node and `gh` are
+  required. The origin must be `https://github.com/ValFilms/ignited-taskboard.git`.
+- Use **`git github ...`** instead of bare `gh ...` here. For example,
+  `git github api user --jq .login` must report `ValFilms`. Before setup, use
+  `npm run github -- ...`. The wrapper selects the saved account credential only
+  for its child process; an inherited token cannot select a different account.
+- Normal Git fetch/push commands and the version scripts use the local credential
+  helper automatically. Its installed copy lives in this repository's Git common
+  directory so it remains available across branches and worktrees.
+- Never run `gh auth switch`, shared `gh auth login/logout/setup-git`, global Git
+  credential/identity changes, or shell-profile exports for this project. Never
+  print a token, run the credential helper directly, log credential-fill output,
+  or copy credentials into tracked files. If ValFilms authorization is missing or
+  invalid, stop that operation instead of falling back to another saved account.
+- Keep past authorship unchanged. New commits use the authenticated ValFilms
+  identity; include `Requested-by: Yaniv` or `Requested-by: Val` in commit messages
+  according to who actually requested the work, so shared-account use does not
+  erase the record of who requested each change. Do not invent an attribution.
+- These rules do not authorize production publication: the staging, preview,
+  go-live, and numbered-restore rules above still apply.

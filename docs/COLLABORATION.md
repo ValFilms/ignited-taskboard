@@ -1,7 +1,30 @@
 # Staging, going live, and restoring versions
 
-Both collaborators use their own GitHub account and a copy of this repository in
-Codex. The shared `AGENTS.md` tells Codex how to handle the steps automatically.
+Both collaborators use a copy of this repository. For this project the owners
+authorized the ValFilms GitHub account. The shared `AGENTS.md` and `CLAUDE.md`
+tell the coding agents how to handle accounts, staging, and release steps.
+
+## Project-specific GitHub account
+
+Run `npm run github -- setup` once per clone and after helper updates. It checks
+the saved ValFilms authorization, then installs settings in this repository only.
+Afterward, `git github identity` must report `ValFilms`; use `git github ...`
+where you would normally use `gh ...`. Git fetch/push and the version scripts use
+the account automatically. Node and GitHub CLI are required.
+
+The helper reads the account's existing credential from GitHub CLI's credential
+store and supplies it to one process at a time. It never switches the shared
+active account or saves tokens in the repository. Other repositories and Claude
+sessions keep their existing account selection. An expired or missing ValFilms
+credential stops the command; another account is never silently substituted.
+
+Local commit identity is ValFilms, matching the authorized account. Existing
+commits retain their original authors. New commit messages record who requested
+the work (`Requested-by: Yaniv` or `Requested-by: Val`, when known).
+
+The local alias and credential helper survive branch changes and apply to this
+repository's worktrees. They do not install themselves in unrelated checkouts.
+Bare `gh` still uses the machine's shared default, so agents must use `git github`.
 
 ## Your everyday workflow
 
