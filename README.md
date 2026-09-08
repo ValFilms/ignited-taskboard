@@ -77,6 +77,6 @@ Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-job
 
 - Raw uploads bypass Vercel body limits via signed Supabase upload URLs. Failed/unsubmitted uploads may leave orphan files; owners can clean those from storage after confirming they are not referenced.
 - The server uses a service credential, so all access must continue to pass through the checked API. No direct database policies for client reads should be added without a security review.
-- Google Drive permissions are separate. The app cannot make a private file accessible; editors should share with appropriate reviewers.
+- John submits the Google Drive folder containing the edits. Reviewers open that folder from the task, then approve or request revisions in Ignited. Individual file links remain supported. Google Drive permissions are separate; John must share the folder/files with the reviewers. The app does not change sharing permissions or automatically sync folder contents.
 - For first activation, verify SQL, storage, login, form trigger, reminders and roles with test records before using real clients. No team invitations have been sent.
 - No live Supabase, Google Form, scheduler, email or push credentials are supplied in this repository.

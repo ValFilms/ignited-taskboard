@@ -47,7 +47,7 @@ test('role forgery and cross-client task IDs cannot bypass permissions',()=>{
   assert.throws(()=>transition(s,s.members[2],{type:'submit',clientId:'demo-0',taskId:'edit-1',value:'https://drive.google.com/file/d/x/view'}),/assigned/);
 });
 test('invalid links and blank revision or update notes do not change data',()=>{
-  const s=demoState();for(const value of ['','https://evil.test/file/d/id','https://drive.google.com.evil.test/file/d/id','javascript:alert(1)','https://drive.google.com/drive/folders/x'])assert.throws(()=>transition(s,s.members[2],{type:'submit',clientId:'demo-1',taskId:'edit-1',value}),/Drive/);
+  const s=demoState();for(const value of ['','https://evil.test/file/d/id','https://drive.google.com.evil.test/file/d/id','javascript:alert(1)','https://drive.google.com/drive/folders/'])assert.throws(()=>transition(s,s.members[2],{type:'submit',clientId:'demo-1',taskId:'edit-1',value}),/Drive/);
   assert.throws(()=>transition(s,s.members[0],{type:'revise',clientId:'demo-0',taskId:'edit-0',value:'   '}),/instructions/);
   s.clients[7].nextUpdate=new Date(now).toISOString();tick(s,now);const t=s.tasks.at(-1)!;
   assert.throws(()=>transition(s,s.members[1],{type:'update',clientId:'demo-7',taskId:t.id,value:'   '}),/summary/);

@@ -1,4 +1,5 @@
 import type { Device, Delivery } from "./push-state";
+import { parseDriveLink } from "./drive-link";
 export type Role = "approver" | "manager" | "editor" | "campaign";
 export type Stage =
   | "Onboarding"
@@ -412,13 +413,9 @@ export function transition(
         t?.kind === "edit" && t.status === "open" && client.stage === "Editing",
         "Editing is not open",
       );
-      assert(
-        /^https:\/\/drive\.google\.com\/file\/d\/[a-zA-Z0-9_-]+(?:\/|$)/.test(
-          a.value || "",
-        ),
-        "Use a Google Drive file link",
-      );
-      client.driveUrl = a.value;
+      const submittedLink = parseDriveLink(a.value);
+      assert(submittedLink, "Use a Google Drive folder or file link");
+      client.driveUrl = submittedLink!.url;
       client.stage = "In review";
       t!.status = "review";
       t!.dueAt = null;
@@ -427,7 +424,7 @@ export function transition(
           s,
           u.id,
           client.id,
-          `${client.name}: video ready for approval`,
+          `${client.name}: ${submittedLink!.kind === "folder" ? "edited video folder" : "video"} ready for approval`,
           now,
         );
       break;

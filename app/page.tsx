@@ -42,6 +42,7 @@ import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
 import TeamTask from "./team-task";
 import PushSettings from "./push-settings";
+import { parseDriveLink } from "../lib/drive-link";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -426,6 +427,7 @@ export default function Page() {
       `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
   );
   const current = s.clients.find((c) => c.id === selected);
+  const reviewLink = parseDriveLink(current?.driveUrl);
   const approvals = s.clients.filter((c) => c.stage === "In review");
   const openTasks = s.tasks.filter((t) => t.status !== "done");
   const mine = openTasks.filter((t) => t.assignee === me.id);
@@ -985,7 +987,7 @@ export default function Page() {
                   </div>
                   <div className="connection-row">
                     <span>Google Drive edits</span>
-                    <b>File links</b>
+                    <b>Folder & file links</b>
                   </div>
                   <div className="connection-row">
                     <span>Notifications</span>
@@ -1224,6 +1226,13 @@ export default function Page() {
                   ))}
                 </section>
               )}
+              {reviewLink && current.stage !== "In review" && <section className="detail-section">
+                <h3>Latest submitted edits</h3>
+                <a className="file-link" target="_blank" rel="noreferrer" href={reviewLink.url}>
+                  {reviewLink.kind === "folder" ? "Open folder in Google Drive" : "Open video in Google Drive"}
+                  <ArrowUpRight size={16} />
+                </a>
+              </section>}
               {s.tasks
                 .filter((t) => t.clientId === current.id && t.status !== "done" && t.kind !== "custom")
                 .map((t) => (
@@ -1278,14 +1287,16 @@ export default function Page() {
                       t.assignee === me.id && (
                         <>
                           <label>
-                            Edited video · Google Drive file link
+                            Edited videos · Google Drive folder link
                             <input
                               type="url"
                               value={value}
                               onChange={(e) => setValue(e.target.value)}
-                              placeholder="https://drive.google.com/file/d/…/view"
+                              placeholder="https://drive.google.com/drive/folders/…"
+                              maxLength={2048}
                             />
                           </label>
+                          <p className="muted">Paste the folder containing the edits and share it with the reviewer. Individual video links also work.</p>
                           {action("submit", "Submit for approval", {
                             taskId: t.id,
                             value,
@@ -1294,34 +1305,30 @@ export default function Page() {
                       )}
                     {t.kind === "edit" && t.status === "review" && (
                       <>
-                        {current.driveUrl ? (
+                        {reviewLink ? (
                           <>
-                            <iframe
+                            {reviewLink.previewUrl && <iframe
                               className="video-preview"
                               title="Edited video preview"
-                              src={current.driveUrl.replace(
-                                /\/file\/d\/([^/]+).*/,
-                                "/file/d/$1/preview",
-                              )}
+                              src={reviewLink.previewUrl}
                               allow="fullscreen"
-                            />
+                            />}
                             <a
                               className="file-link"
                               target="_blank"
                               rel="noreferrer"
-                              href={current.driveUrl}
+                              href={reviewLink.url}
                             >
-                              Open video in Google Drive
+                              {reviewLink.kind === "folder" ? "Open folder in Google Drive" : "Open video in Google Drive"}
                               <ArrowUpRight size={16} />
                             </a>
                             <p className="muted">
-                              If the preview asks for access, open Drive and
-                              request permission from the editor.
+                              {reviewLink.kind === "folder" ? "Review the videos in the folder, then return here to approve or request revisions." : "If the preview asks for access, open Drive and request permission from the editor."}
                             </p>
                           </>
                         ) : (
                           <p className="muted">
-                            Sample review — no actual video attached.
+                            {current.driveUrl ? "This saved Drive link cannot be opened. Request a new folder or file link from the editor." : "Sample review — no actual videos attached."}
                           </p>
                         )}
                         {me.role === "approver" && (
