@@ -8,7 +8,7 @@ export async function POST(req: Request) {
       req.headers.get("authorization")?.replace(/^Bearer /, "") || "";
     if (
       !key ||
-      supplied.length !== key.length ||
+      Buffer.byteLength(supplied) !== Buffer.byteLength(key) ||
       !timingSafeEqual(Buffer.from(key), Buffer.from(supplied))
     )
       return Response.json({ error: "Unauthorized" }, { status: 401 });
