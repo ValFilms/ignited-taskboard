@@ -20,6 +20,20 @@ The primary owner is the only ad approver. Yaniv is a manager with full board, c
 
 ## Ownership and reminders
 
+All configured teammates may create custom tasks for any teammate, including
+themselves. A custom task can be general or linked to a currently accessible,
+non-closed client, with a required title, optional instructions and optional future
+deadline. The creator, assignee and owners can reassign, complete or reopen it.
+Creators retain visibility of tasks they requested; assignees receive the related
+client context with the same private-field redaction as existing staff access.
+The name/role directory is visible to every teammate for choosing assignees.
+Other people's unrelated tasks remain hidden. Custom tasks do not advance client
+stages or change the ad approval rules. Completion notifies the other participant.
+
+Profile controls open settings, the inbox, personal work, appearance and sign-out.
+Phone navigation stays at the bottom; client stages stack vertically on phones.
+Web Push device subscriptions and server delivery are described in [PUSH.md](docs/PUSH.md).
+
 New clients default to the primary owner. Assignment to Yaniv is manual and reversible. Automatic load balancing was not confirmed. Daily campaign reminders and ad-refresh reminders are omitted. Task notices are in-app; approaching reminders go to assignee and primary owner six hours before deadline, overdue reminders at/after due. Each reminder has a stable task/cycle/recipient key to prevent duplicates. A five-minute external scheduler is required for unattended delivery. Deadlines use UTC elapsed time and display in each viewer's local timezone.
 
 ## Intake and external systems
@@ -28,6 +42,6 @@ The Google Form is authoritative. GHL remains the separate sales system; Closebo
 
 ## Deployment state and limits
 
-Without Supabase public configuration, a clearly labeled demo uses fictional data held in memory for one browser session. Role switching is available only in that demo. No uploads, email, push or live sync are simulated as successful. With Supabase configured, the app requires sign-in and the demo disappears. Production activation requires the SQL schema, private bucket, registered team Auth users, environment secrets and verified scheduler/form setup. Push/email delivery and automatic Drive folder sync are future work. No public signup or automatic team invitations.
+Without Supabase public configuration, a clearly labeled demo uses fictional data held in memory for one browser session. Role switching is available only in that demo. No uploads, email, push or live sync are simulated as successful. With Supabase configured, the app requires sign-in and the demo disappears. Production activation requires the SQL schema, private bucket, registered team Auth users, environment secrets and verified scheduler/form setup. Web Push additionally requires VAPID sender configuration and each device's permission/subscription. Email and automatic Drive folder sync are future work. No public signup or automatic team invitations.
 
 The version-one durable store uses a single JSON workspace record with optimistic version checks and retry to prevent lost updates. Appropriate for a small internal team, not an unbounded CRM. Notifications/activity are retained; archive/retention policy and normalized tables are future scale work.

@@ -39,6 +39,9 @@ import { demoState } from "../lib/demo";
 import NotificationToasts from "./notification-toasts";
 import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
+import ProfileMenu from "./profile-menu";
+import TeamTask from "./team-task";
+import PushSettings from "./push-settings";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -63,7 +66,8 @@ function date(value?: string | null) {
 function due(t?: Task) {
   if (!t) return "Next step ready";
   if (t.status === "review") return "Clock paused";
-  if (!t.dueAt) return "Complete";
+  if (t.status === "done") return "Complete";
+  if (!t.dueAt) return "No deadline";
   const h = Math.ceil((Date.parse(t.dueAt) - Date.now()) / 3600000);
   return h < 0
     ? `${Math.abs(h)}h overdue`
@@ -79,6 +83,9 @@ function initials(name: string) {
     .join("");
 }
 export default function Page() {
+  const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string } | null>(null);
+  const [taskFilter, setTaskFilter] = useState("mine");
+  const [stageFilter, setStageFilter] = useState("all");
   const changes = useRef(0);
   const currentUser = useRef("");
   const [all, setAll] = useState<State | null>(null),
@@ -98,6 +105,7 @@ export default function Page() {
     [memberName, setMemberName] = useState(""),
     [memberRole, setMemberRole] = useState<Member["role"]>("editor");
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("inbox") === "1") setView("notifications");
     if (!auth) {
       setAll(demoState());
       return;
@@ -110,7 +118,8 @@ export default function Page() {
         changes.current++;
         setAll(null);
         setSelected(null);
-        setView("board");
+        setTaskDialog(null);
+        setView(new URLSearchParams(window.location.search).get("inbox") === "1" ? "notifications" : "board");
         setError("");
       }
       setToken(session?.access_token || "");
@@ -206,7 +215,10 @@ export default function Page() {
         ) || [],
       );
     focusable()[0]?.focus();
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const key = (e: KeyboardEvent) => {
+      if (document.querySelector("dialog[open]")) return;
       if (e.key === "Escape") setSelected(null);
       if (e.key === "Tab") {
         const els = focusable(),
@@ -224,6 +236,7 @@ export default function Page() {
     document.addEventListener("keydown", key);
     return () => {
       document.removeEventListener("keydown", key);
+      document.body.style.overflow = oldOverflow;
       previous?.focus();
     };
   }, [selected]);
@@ -237,11 +250,17 @@ export default function Page() {
     void auth!.auth.signOut({ scope: "local" });
   }
   async function signOut() {
+    try {
+      const registration = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : null;
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) { await api("/api/push", { type: "unsubscribe", endpoint: subscription.endpoint }); await subscription.unsubscribe(); }
+    } catch { /* Push payloads contain no private task details; sign-out must still work. */ }
     changes.current++;
     currentUser.current = "";
     setAll(null);
     setToken("");
     setSelected(null);
+    setTaskDialog(null);
     setError("");
     setPassword("");
     await auth!.auth.signOut({ scope: "local" });
@@ -253,7 +272,7 @@ export default function Page() {
     }, expireSession);
   }
   async function act(a: Action) {
-    if (!all || !me) return;
+    if (!all || !me) return false;
     setBusy(true);
     const actor = currentUser.current;
     changes.current++;
@@ -262,8 +281,10 @@ export default function Page() {
       const next = configured ? await api("/api/workspace", a) : transition(all, me, a);
       if (actor === currentUser.current) { changes.current++; setAll(next); }
       setValue("");
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -410,6 +431,16 @@ export default function Page() {
   const overdue = openTasks.filter(
     (t) => t.dueAt && Date.parse(t.dueAt) < Date.now(),
   );
+  const workTasks = s.tasks.filter(t => taskFilter === "completed" ? t.status === "done" :
+    t.status !== "done" && (taskFilter === "all" || taskFilter === "overdue" && !!t.dueAt && Date.parse(t.dueAt) < Date.now() ||
+    taskFilter === "sent" && t.createdBy === me.id || taskFilter === "mine" && t.assignee === me.id));
+  const openNotice = (n: State["notifications"][number]) => {
+    const task = s.tasks.find(t => t.id === n.taskId);
+    if (task?.kind === "custom") setTaskDialog({ id: task.id });
+    else if (n.clientId) setSelected(n.clientId);
+    else setView("work");
+    void act({ type: "read", key: n.id });
+  };
   const title = {
     board: "Client progress",
     work: "My work",
@@ -444,7 +475,8 @@ export default function Page() {
       key={t.id}
       className="task-row"
       onClick={() => {
-        setSelected(t.clientId);
+        if (t.kind === "custom") setTaskDialog({ id: t.id });
+        else setSelected(t.clientId);
         setValue("");
       }}
     >
@@ -457,11 +489,11 @@ export default function Page() {
       </span>
       <span>
         <strong>{t.title}</strong>
-        <small>{s.clients.find((c) => c.id === t.clientId)?.name}</small>
+        <small>{s.clients.find((c) => c.id === t.clientId)?.name || "General team task"} · {s.members.find(m => m.id === t.assignee)?.name}</small>
       </span>
       <span className="task-date">
         {due(t)}
-        <small>{date(t.dueAt)}</small>
+        <small>{t.dueAt ? date(t.dueAt) : t.status === "review" ? "Paused for approval" : ""}</small>
       </span>
       <ChevronRight size={18} />
     </button>
@@ -492,13 +524,13 @@ export default function Page() {
             IGNITED<small>CONTENT CO.</small>
           </span>
         </div>
-        <div className="workspace-name">
+        <button className="workspace-name" onClick={() => setView("settings")}>
           <span className="workspace-avatar">IC</span>
           <div>
             Agency workspace<small>Internal team</small>
           </div>
           <ChevronRight size={16} />
-        </div>
+        </button>
         <p className="nav-label">WORKSPACE</p>
         {owner &&
           nav("board", "Client progress", <LayoutDashboard size={19} />)}
@@ -556,6 +588,7 @@ export default function Page() {
               })}
             </span>
             <ThemeToggle />
+            <button className="icon-button" aria-label="Create task" title="Create task" onClick={() => { setError(""); setTaskDialog({}); }}><Plus size={20} /></button>
             <button
               className="icon-button notification-bell"
               aria-label={`Open notifications, ${s.notifications.filter(n => !n.read).length} unread`}
@@ -564,7 +597,7 @@ export default function Page() {
               <Bell size={19} />
               {s.notifications.some(n => !n.read) && <span className="notification-count">{Math.min(s.notifications.filter(n => !n.read).length, 99)}</span>}
             </button>
-            <span className="avatar small">{initials(me.name)}</span>
+            <ProfileMenu me={me} navigate={v => { setView(v); setSelected(null); setError(""); }} signOut={configured ? () => void signOut() : undefined} />
           </div>
         </header>
         {!configured && (
@@ -579,6 +612,8 @@ export default function Page() {
                 value={userId}
                 onChange={(e) => {
                   setUserId(e.target.value);
+                  setTaskDialog(null);
+                  setTaskFilter("mine");
                   setSelected(null);
                   setView(
                     e.target.value === "john" || e.target.value === "carl"
@@ -637,7 +672,7 @@ export default function Page() {
           {view === "board" && owner && (
             <>
               <div className="stats">
-                <div>
+                <button className="stat-card" onClick={() => { setStageFilter("production"); document.getElementById("delivery-board")?.scrollIntoView({ behavior: "smooth" }); }}>
                   <span>In production</span>
                   <strong>
                     {
@@ -655,8 +690,8 @@ export default function Page() {
                   <span className="stat-icon">
                     <Play size={19} />
                   </span>
-                </div>
-                <div>
+                </button>
+                <button className="stat-card" onClick={() => setView("approvals")}>
                   <span>Awaiting approval</span>
                   <strong>
                     {approvals.length}
@@ -665,8 +700,8 @@ export default function Page() {
                   <span className="stat-icon purple">
                     <CheckCircle2 size={19} />
                   </span>
-                </div>
-                <div>
+                </button>
+                <button className="stat-card" onClick={() => { setStageFilter("Trial"); document.getElementById("delivery-board")?.scrollIntoView({ behavior: "smooth" }); }}>
                   <span>Live trials</span>
                   <strong>
                     {s.clients.filter((c) => c.stage === "Trial").length}
@@ -675,8 +710,8 @@ export default function Page() {
                   <span className="stat-icon green">
                     <Flame size={19} />
                   </span>
-                </div>
-                <div>
+                </button>
+                <button className="stat-card" onClick={() => { setTaskFilter("overdue"); setView("work"); }}>
                   <span>Overdue tasks</span>
                   <strong>
                     {overdue.length.toString().padStart(2, "0")}
@@ -687,13 +722,17 @@ export default function Page() {
                   <span className="stat-icon">
                     <Clock3 size={19} />
                   </span>
-                </div>
+                </button>
               </div>
-              <div className="board-toolbar">
+              <div className="board-toolbar" id="delivery-board">
                 <div className="tab-active">
                   Delivery board <span>{clients.length}</span>
                 </div>
                 <div className="filters">
+                  <select aria-label="Filter by stage" value={stageFilter} onChange={e => setStageFilter(e.target.value)}>
+                    <option value="all">All stages</option><option value="production">In production</option>
+                    {stages.map(stage => <option key={stage}>{stage}</option>)}
+                  </select>
                   <label className="search">
                     <Search size={16} />
                     <input
@@ -721,8 +760,8 @@ export default function Page() {
                 {stages
                   .filter(
                     (stage) =>
-                      stage !== "Closed" ||
-                      clients.some((c) => c.stage === "Closed"),
+                      (stageFilter === "all" || stageFilter === stage || stageFilter === "production" && ["Filming", "Editing", "In review", "Campaign setup"].includes(stage)) &&
+                      (stage !== "Closed" || stageFilter === "Closed" || clients.some((c) => c.stage === "Closed")),
                   )
                   .map((stage, index) => (
                     <section className="column" key={stage}>
@@ -806,15 +845,19 @@ export default function Page() {
           {view === "work" && (
             <div className="panel">
               <div className="panel-heading">
-                <h2>Assigned to you</h2>
-                <span>{mine.length} open</span>
+                <h2>Team tasks</h2>
+                <button className="primary" onClick={() => { setError(""); setTaskDialog({}); }}><Plus size={18} />New task</button>
               </div>
-              {mine.map(taskCard)}
-              {!mine.length && (
+              <div className="task-filters" aria-label="Task filters">
+                {[["mine", "Assigned to me"], ["sent", "Assigned by me"], ...(owner ? [["all", "All open"], ["overdue", "Overdue"]] : []), ["completed", "Completed"]].map(([id, label]) =>
+                  <button key={id} aria-pressed={taskFilter === id} onClick={() => setTaskFilter(id)}>{label}</button>)}
+              </div>
+              {workTasks.map(taskCard)}
+              {!workTasks.length && (
                 <div className="empty">
                   <CheckCircle2 />
-                  <h3>You’re all caught up.</h3>
-                  <p>Your next assignment will appear here.</p>
+                  <h3>No tasks in this view.</h3>
+                  <p>Create a task for yourself or any teammate.</p>
                 </div>
               )}
             </div>
@@ -853,7 +896,7 @@ export default function Page() {
                   <button
                     className="notice"
                     key={n.id}
-                    onClick={() => { setSelected(n.clientId); void act({ type: "read", key: n.id }); }}
+                    onClick={() => openNotice(n)}
                   >
                     <span className={n.read ? "read-dot" : "unread-dot"} />
                     <span>
@@ -925,6 +968,7 @@ export default function Page() {
                   <div className="appearance-setting"><span>Appearance</span><ThemeToggle /></div>
                 </div>
               </section>
+              <PushSettings configured={configured} api={api} />
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Connections</h2>
@@ -950,7 +994,7 @@ export default function Page() {
                     New notifications appear as pop-ups while the taskboard is open.
                     The inbox and deadline checks refresh every 15 seconds.
                     Dismiss a pop-up to keep it unread, or open it to view the client.
-                    When everyone closes the app, deadline checks resume the next time someone opens it.
+                    Enable push above for device alerts. Deadline alerts while everyone is away require the server reminder schedule.
                   </p>
                 </div>
               </section>
@@ -1059,6 +1103,7 @@ export default function Page() {
               <span className="badge">{current.stage}</span>
             </div>
             <div className="drawer-body">
+              <button className="secondary" onClick={() => { setError(""); setTaskDialog({ clientId: current.id }); }} disabled={current.stage === "Closed"}><Plus size={18} />Assign a task</button>
               {error && (
                 <p className="error" role="alert">
                   {error}
@@ -1179,7 +1224,7 @@ export default function Page() {
                 </section>
               )}
               {s.tasks
-                .filter((t) => t.clientId === current.id && t.status !== "done")
+                .filter((t) => t.clientId === current.id && t.status !== "done" && t.kind !== "custom")
                 .map((t) => (
                   <section className="detail-section" key={t.id}>
                     <div className="section-title">
@@ -1327,6 +1372,7 @@ export default function Page() {
                     )}
                   </section>
                 ))}
+              {s.tasks.some(t => t.clientId === current.id && t.kind === "custom") && <section className="detail-section"><h3>Team tasks</h3>{s.tasks.filter(t => t.clientId === current.id && t.kind === "custom").map(taskCard)}</section>}
               {current.stage === "Ready to launch" && owner && (
                 <section className="detail-section">
                   <h3>Launch checklist</h3>
@@ -1471,10 +1517,8 @@ export default function Page() {
           </section>
         </div>
       )}
-      <NotificationToasts key={userId} notices={all!.notifications.filter(n => n.userId === userId)} onOpen={n => {
-        setSelected(n.clientId);
-        void act({ type: "read", key: n.id });
-      }} />
+      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} />}
+      <NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />
     </div>
   );
 }

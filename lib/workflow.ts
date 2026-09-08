@@ -1,3 +1,4 @@
+import type { Device, Delivery } from "./push-state";
 export type Role = "approver" | "manager" | "editor" | "campaign";
 export type Stage =
   | "Onboarding"
@@ -14,7 +15,9 @@ export type Task = {
   id: string;
   clientId: string;
   title: string;
-  kind: "edit" | "campaign" | "update";
+  kind: "edit" | "campaign" | "update" | "custom";
+  createdBy?: string;
+  completedAt?: string;
   assignee: string;
   status: "open" | "review" | "done";
   createdAt: string;
@@ -51,8 +54,11 @@ export type Notice = {
   text: string;
   createdAt: string;
   read: boolean;
+  taskId?: string;
 };
 export type State = {
+  pushDevices?: Device[];
+  pushQueue?: Delivery[];
   members: Member[];
   clients: Client[];
   tasks: Task[];
@@ -84,13 +90,14 @@ const assert = (v: unknown, message: string) => {
   if (!v) throw new Error(message);
 };
 export function visibleState(s: State, m: Member): State {
+  const { pushDevices: _devices, pushQueue: _queue, ...publicState } = s;
   const tasks = isOwner(m)
     ? s.tasks
-    : s.tasks.filter((t) => t.assignee === m.id);
+    : s.tasks.filter((t) => t.assignee === m.id || t.createdBy === m.id);
   const ids = new Set(tasks.map((t) => t.clientId));
   return {
-    ...s,
-    members: isOwner(m) ? s.members : s.members.filter((u) => u.id === m.id),
+    ...publicState,
+    members: s.members.map(({ id, name, role }) => ({ id, name, role })),
     tasks,
     clients: s.clients
       .filter((c) => isOwner(m) || ids.has(c.id))
@@ -106,7 +113,7 @@ export function visibleState(s: State, m: Member): State {
               paymentConfirmed: false,
             },
       ),
-    notifications: s.notifications.filter((n) => n.userId === m.id && (isOwner(m) || ids.has(n.clientId))),
+    notifications: s.notifications.filter((n) => n.userId === m.id && (isOwner(m) || ids.has(n.clientId) || tasks.some(t => t.id === n.taskId))),
     events: isOwner(m) ? s.events : [],
   };
 }
@@ -117,6 +124,7 @@ function notice(
   text: string,
   now: number,
   key?: string,
+  taskId?: string,
 ) {
   const id = key || crypto.randomUUID();
   if (!s.notifications.some((n) => n.id === id))
@@ -127,6 +135,7 @@ function notice(
       text,
       createdAt: iso(now),
       read: false,
+      ...(taskId ? { taskId } : {}),
     });
 }
 function owners(s: State) {
@@ -180,6 +189,7 @@ export function tick(s: State, now = Date.now()) {
           `${t.title}: ${phase === "overdue" ? "overdue" : "due within 6 hours"}`,
           now,
           `${t.id}:${t.cycle}:${phase}:${id}`,
+          t.id,
         );
   }
   for (const c of s.clients) {
@@ -221,6 +231,7 @@ export type Action = {
   files?: { path: string; name: string }[];
   profile?: Partial<Client>;
   member?: Member;
+  task?: { title: string; assignee: string; notes?: string; dueAt?: string | null };
 };
 export function transition(
   input: State,
@@ -240,6 +251,47 @@ export function transition(
     return s;
   }
   if (a.type === "refresh") return s;
+  if (["createTask", "reassignTask", "completeTask", "reopenTask"].includes(a.type)) {
+    let task = s.tasks.find(t => t.id === a.taskId);
+    if (a.type === "createTask") {
+      const data = a.task;
+      assert(data && typeof data.title === "string" && data.title.trim() && data.title.trim().length <= 160, "Enter a task title (up to 160 characters)");
+      assert(data?.notes === undefined || (typeof data.notes === "string" && data.notes.length <= 4000), "Task notes must be at most 4000 characters");
+      assert(s.members.some(u => u.id === data?.assignee), "Choose a team member");
+      assert(data?.dueAt === undefined || data.dueAt === null || (typeof data.dueAt === "string" && Number.isFinite(Date.parse(data.dueAt)) && Date.parse(data.dueAt) > now), "Choose a future deadline or leave it empty");
+      const clientId = a.clientId || "";
+      assert(typeof clientId === "string" && (!clientId || visibleState(s, m).clients.some(c => c.id === clientId && c.stage !== "Closed")), "Choose an accessible active client");
+      task = { id: crypto.randomUUID(), clientId, kind: "custom", title: data!.title.trim(), assignee: data!.assignee,
+        createdBy: m.id, notes: data!.notes?.trim() || "", status: "open", createdAt: iso(now),
+        dueAt: data!.dueAt ? iso(Date.parse(data!.dueAt)) : null, cycle: 0 };
+      s.tasks.push(task);
+      notice(s, task.assignee, clientId, `${m.name} assigned you: ${task.title}`, now, undefined, task.id);
+    } else {
+      assert(task?.kind === "custom", "Task not found");
+      assert(isOwner(m) || task!.assignee === m.id || task!.createdBy === m.id, "Only task participants may manage this task");
+      if (a.type === "reassignTask") {
+        assert(task!.status === "open", "Reopen the task before reassigning it");
+        assert(s.members.some(u => u.id === a.value), "Choose a team member");
+        if (task!.assignee === a.value) return s;
+        const previous = task!.assignee;
+        task!.assignee = a.value!;
+        task!.cycle++;
+        notice(s, task!.assignee, task!.clientId, `${m.name} assigned you: ${task!.title}`, now, undefined, task!.id);
+        notice(s, previous, task!.clientId, `${m.name} reassigned: ${task!.title}`, now, undefined, task!.id);
+      } else {
+        const complete = a.type === "completeTask";
+        assert(task!.status === (complete ? "open" : "done"), complete ? "Task is already complete" : "Task is already open");
+        task!.status = complete ? "done" : "open";
+        task!.completedAt = complete ? iso(now) : undefined;
+        if (!complete) task!.cycle++;
+        for (const id of new Set([task!.createdBy, task!.assignee])) {
+          if (id && id !== m.id) notice(s, id, task!.clientId, `${m.name} ${complete ? "completed" : "reopened"}: ${task!.title}`, now, undefined, task!.id);
+        }
+      }
+    }
+    s.events.push({ id: crypto.randomUUID(), clientId: task!.clientId, text: `${m.name}: ${a.type} — ${task!.title}`, at: iso(now) });
+    return s;
+  }
   if (a.type === "member") {
     assert(isOwner(m), "Owners only");
     const u = a.member;
@@ -256,7 +308,7 @@ export function transition(
     const username = normalized.name.split(/\s+/)[0].toLowerCase();
     assert(!s.members.some(x => x.id !== normalized.id && x.name.trim().split(/\s+/)[0].toLowerCase() === username), "Choose a unique first name for username sign-in");
     assert(!s.clients.some(c => c.owner === normalized.id) || isOwner(normalized), "Reassign this member's clients before changing their role");
-    assert(!s.tasks.some(t => t.assignee === normalized.id && t.status !== "done" && (t.kind === "update" ? !isOwner(normalized) : normalized.role !== (t.kind === "edit" ? "editor" : "campaign"))), "Reassign open tasks before changing this member's role");
+    assert(!s.tasks.some(t => t.assignee === normalized.id && t.status !== "done" && t.kind !== "custom" && (t.kind === "update" ? !isOwner(normalized) : normalized.role !== (t.kind === "edit" ? "editor" : "campaign"))), "Reassign open tasks before changing this member's role");
     if (i >= 0) s.members[i] = normalized;
     else s.members.push(normalized);
     return s;
@@ -274,7 +326,7 @@ export function transition(
   switch (a.type) {
     case "reassign":
       own();
-      assert(t && t.status !== "done", "Choose an open task");
+      assert(t && t.kind !== "custom" && t.status !== "done", "Choose an open workflow task");
       assert(
         s.members.some(
           (u) =>

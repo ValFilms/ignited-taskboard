@@ -13,17 +13,19 @@
     "github": "node scripts/github.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "lucide-react": "^0.468.0",
     "next": "16.3.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@supabase/supabase-js": "^2.57.0",
-    "lucide-react": "^0.468.0"
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
-    "tsx": "^4.20.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }

@@ -401,14 +401,14 @@ p {
   gap: 15px;
   margin-bottom: 35px;
 }
-.stats > div {
+.stats > button {
   position: relative;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 22px 19px;
   background: var(--surface);
 }
-.stats > div > span:first-child {
+.stats > button > span:first-child {
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -1170,7 +1170,7 @@ h2, h3 { font-weight: 800; }
 .status-dot, .heading-dot, .unread-dot { background: var(--accent); }
 .heading-dot { color: var(--accent); background: none; }
 .live-pill { border-radius: 4px; font-family: var(--mono); }
-.stats > div { background: var(--surface); border-top: 2px solid var(--accent); }
+.stats > button { background: var(--surface); border-top: 2px solid var(--accent); }
 .stats strong { font-family: var(--display); font-weight: 800; }
 .stats strong small { font-family: "Archivo", sans-serif; }
 .stat-icon, .stat-icon.green, .stat-icon.purple, .task-symbol, .task-symbol.purple {
@@ -1227,7 +1227,7 @@ h2, h3 { font-weight: 800; }
   .stats {
     gap: 22px;
   }
-  .stats > div {
+  .stats > button {
     padding: 25px;
   }
   .client-card {
@@ -1252,7 +1252,7 @@ h2, h3 { font-weight: 800; }
   .stats {
     gap: 9px;
   }
-  .stats > div {
+  .stats > button {
     padding: 18px 13px;
   }
   .stat-icon {
@@ -1359,7 +1359,7 @@ h2, h3 { font-weight: 800; }
     gap: 10px;
     margin-bottom: 20px;
   }
-  .stats > div {
+  .stats > button {
     padding: 18px;
   }
   .stats strong {
@@ -1515,4 +1515,92 @@ h2, h3 { font-weight: 800; }
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Team controls and touch layouts share the existing light/dark palette. */
+.workspace-name { color: var(--ink); text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.stat-card { text-align: left; color: var(--ink); min-width: 0; }
+.stat-card:hover { background: var(--raised); border-color: var(--accent); }
+.profile-control { position: relative; }
+.profile-trigger { display: flex; align-items: center; gap: 4px; border: 0; background: transparent; min-height: 44px; padding: 2px; }
+.profile-popover { position: absolute; right: 0; top: calc(100% + 8px); width: 268px; max-width: calc(100vw - 24px); z-index: 18;
+  padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 12px 40px #0004; }
+.profile-summary { padding: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.profile-summary strong, .profile-summary small { display: block; }
+.profile-summary small { color: var(--muted); margin-top: 5px; }
+.profile-popover > button { display: flex; width: 100%; align-items: center; justify-content: flex-start; gap: 12px; min-height: 44px; padding: 12px; background: transparent; border: 0; border-radius: 5px; text-align: left; }
+.profile-popover > button:hover { background: var(--raised); }
+.demo-profile-note { display: block; padding: 12px; color: var(--muted); line-height: 1.5; }
+.task-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.task-filters button { min-height: 44px; border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; background: var(--surface); font-size: .85rem; }
+.task-filters button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); background: var(--raised); }
+.task-dialog { color: var(--ink); background: var(--surface); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow-y: auto; overscroll-behavior: contain; }
+.task-dialog::backdrop { background: #0009; backdrop-filter: blur(2px); }
+.task-dialog .drawer-top, .drawer > .drawer-top { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.task-dialog .drawer-top h2 { font-size: 1rem; letter-spacing: 0; margin: 0; color: var(--ink); }
+.dialog-body { padding: 24px; }
+.dialog-actions, .push-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.dialog-actions > button { flex: 1; }
+.task-title { margin: 16px 0; overflow-wrap: anywhere; line-height: 1.4; }
+.task-notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.task-row strong, .task-row small, .notice, .drawer-heading h2 { overflow-wrap: anywhere; }
+.task-row > span:nth-child(2) { min-width: 0; }
+.push-help { margin-top: 16px; font-size: .9rem; line-height: 1.6; }
+.push-help svg { vertical-align: middle; }
+.push-guide { margin-top: 22px; line-height: 1.6; color: var(--muted); }
+.push-guide summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--ink); }
+.push-guide ol { padding-left: 22px; }
+.panel-heading h2 svg { vertical-align: middle; margin-right: 5px; }
+.board-toolbar { scroll-margin-top: 76px; }
+.filters { flex-wrap: wrap; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-height: 70px; padding: 6px 4px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); border-right: 0; background: var(--surface); justify-content: space-around; overflow: visible; gap: 0; }
+  .sidebar > .brand { display: none; }
+  .sidebar .nav { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 5px; min-width: 0; min-height: 56px; padding: 6px 2px; position: relative; }
+  .sidebar .nav span { display: block; font-size: 10px; line-height: 1.2; text-align: center; white-space: normal; }
+  .sidebar .nav b { position: absolute; top: 1px; right: 3px; min-width: 14px; }
+  .main { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  .topbar { position: sticky; top: 0; z-index: 15; height: auto; min-height: 64px; padding: max(8px, env(safe-area-inset-top)) 12px 8px; gap: 8px; }
+  .topbar > span { font-size: 0; gap: 0; }
+  .topbar > span > svg { display: none; }
+  .topbar > span strong { font-size: .85rem; white-space: normal; }
+  .topbar > div { gap: 3px; }
+  .topbar .theme-toggle { display: none; }
+  .topbar .profile-popover .theme-toggle { display: flex; width: 100%; min-height: 44px; padding: 12px; }
+  .topbar .profile-popover .theme-toggle span { display: inline; }
+  .icon-button, .text-button, .theme-toggle { min-height: 44px; min-width: 44px; }
+  .profile-trigger { min-width: 48px; }
+  .demo-banner { flex-wrap: wrap; gap: 8px; }
+  .demo-banner label { margin: 0; }
+  .content { padding: 24px 16px; }
+  input, select, textarea { font-size: 16px !important; min-height: 44px; max-width: 100%; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .filters .search { grid-column: 1 / -1; grid-row: 1; margin: 0; width: 100%; }
+  .filters select { width: 100%; min-width: 0; }
+  .board { display: flex; flex-direction: column; gap: 22px; overflow: visible; margin: 0; padding: 0; }
+  .column { width: 100%; min-width: 0; }
+  .column-cards { min-height: 0; }
+  .client-card { width: 100%; }
+  .stats > button { padding: 16px 12px; }
+  .stats > button > span:first-child { font-size: .8rem; }
+  .task-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 18px; width: 100%; padding: 16px 12px; }
+  .task-row .task-date { grid-column: 2; grid-row: 2; margin: 0; }
+  .task-row > svg { grid-column: 3; grid-row: 1; }
+  .task-row strong { font-size: .95rem; }
+  .task-filters { padding: 12px; gap: 6px; }
+  .task-filters button { flex: 1 0 auto; }
+  .panel-heading { flex-wrap: wrap; gap: 12px; }
+  .panel-heading h2 { font-size: .9rem; }
+  .panel-heading .primary { padding: 10px 12px; }
+  .settings-body { padding: 20px; }
+  .drawer { width: 100%; height: 100dvh; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+  .drawer-body, .drawer-heading { padding: 22px 18px; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .task-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .dialog-body { padding: 20px 16px max(20px, env(safe-area-inset-bottom)); }
+  .dialog-actions { position: sticky; bottom: -20px; background: var(--surface); padding: 12px 0; }
+  .push-actions > button { width: 100%; justify-content: center; }
+  .notification-toasts { bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 19; }
+  .notification-count { top: 1px; right: 0; }
 }

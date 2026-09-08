@@ -18,7 +18,7 @@ export default function NotificationToasts({ notices, onOpen }: {
     {items.map(n => <div className="notification-toast" key={n.id}>
       <Bell size={20} aria-hidden="true" />
       <button className="toast-open" onClick={() => onOpen(n)}>
-        <strong>New notification</strong><span>{n.text}</span><small>View client</small>
+        <strong>New notification</strong><span>{n.text}</span><small>{n.taskId ? "View task" : "View client"}</small>
       </button>
       <button className="icon-button" aria-label="Dismiss notification pop-up" onClick={() => setItems(items => items.filter(v => v.id !== n.id))}><X size={17} /></button>
     </div>)}

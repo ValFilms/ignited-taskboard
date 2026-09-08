@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { Member, State } from "./workflow";
+import { pushConfigured, queueNotices } from "./push-state";
 export function admin() {
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -30,12 +31,14 @@ export async function readState() {
   if (error || !data) throw new Error("Workspace database is not initialized");
   return { state: data.data as State, version: data.version as number };
 }
-export async function mutate(fn: (s: State) => State) {
+export async function mutate(fn: (s: State) => State, deliverPush = true) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const { state, version } = await readState();
     const before = JSON.stringify(state);
+    const notices = new Set(state.notifications.map(n => n.id));
     const next = fn(state);
-    if (JSON.stringify(next) === before) return next;
+    if (deliverPush && pushConfigured()) queueNotices(next, notices);
+    if (JSON.stringify(next) === before) { if (deliverPush) await dispatchPush(); return next; }
     const { data, error } = await admin()
       .from("workspace")
       .update({ data: next, version: version + 1 })
@@ -43,9 +46,14 @@ export async function mutate(fn: (s: State) => State) {
       .eq("version", version)
       .select("version");
     if (error) throw new Error("Could not save changes");
-    if (data?.length) return next;
+    if (data?.length) { if (deliverPush) await dispatchPush(); return next; }
   }
   throw new Error("Workspace changed. Please retry.");
+}
+async function dispatchPush() {
+  if (!pushConfigured()) return;
+  try { await (await import("./push-server")).flushPush(); }
+  catch { console.error("Push delivery deferred; saved workspace changes are intact."); }
 }
 export function member(s: State, id: string): Member {
   const m = s.members.find((x) => x.id === id);

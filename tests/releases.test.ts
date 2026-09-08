@@ -74,11 +74,12 @@ test("dirty work and invalid version names are rejected without discarding files
   assert.equal(git(f.remote, "rev-parse", "refs/heads/main"), f.initial);
 });
 
-test("two collaborators starting together receive different staging numbers", { timeout: 30000 }, async t => {
+test("two collaborators starting together receive different staging numbers", { timeout: process.platform === "win32" ? 120000 : 30000 }, async t => {
   const f = fixture(t);
   const b = f.clone("second");
   const start = (cwd: string) => new Promise<any>((resolveRun, reject) => {
     const child = spawn(process.execPath, [loader, cli, "stage", "Parallel work"], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    t.after(() => { if (child.exitCode === null) child.kill(); });
     let output = "", error = "";
     child.stdout.on("data", chunk => { output += chunk; });
     child.stderr.on("data", chunk => { error += chunk; });

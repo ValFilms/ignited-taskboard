@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const source = resolve("scripts/github.mjs");
 const repository = "ValFilms/ignited-taskboard";
@@ -40,7 +41,18 @@ if (args[0] === "auth" && args[1] === "token") {
   console.log(JSON.stringify({args,repository:process.env.GH_REPO}));
 }
 `, { mode: 0o755 });
-  const env = { ...process.env, PATH: `${bin}:${dirname(process.execPath)}:${process.env.PATH}`,
+  // Windows does not execute extensionless shebang scripts. Redirect only the
+  // fixture's gh process through Node; production helper code stays unchanged.
+  const preload = join(root, "mock-gh.mjs");
+  writeFileSync(preload, `import cp from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+const original = cp.spawnSync;
+cp.spawnSync = (command, args, options) => command === 'gh'
+  ? original(process.execPath, [${JSON.stringify(join(bin, "gh"))}, ...args], options)
+  : original(command, args, options);
+syncBuiltinESMExports();`);
+  const env = { ...process.env, PATH: [bin, dirname(process.execPath), process.env.PATH].join(delimiter),
+    ...(process.platform === "win32" ? { NODE_OPTIONS: `--import="${pathToFileURL(preload).href}"` } : {}),
     GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: "1", GH_CONFIG_DIR: join(root, "gh"),
     FIXTURE_ACTIVE: active, FIXTURE_LOG: log, GH_TOKEN: "unrelated-inherited-token", GITHUB_TOKEN: "also-unrelated" };
   for (const key of ["GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "GIT_DIR", "GIT_WORK_TREE"]) delete env[key as keyof typeof env];

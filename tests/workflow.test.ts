@@ -24,7 +24,7 @@ test("members receive only assigned work and necessary client context", () => {
   assert(v.tasks.every((t) => t.assignee === "john"));
   assert(v.clients.every((c) => c.email === "" && c.closebot === ""));
   assert.deepEqual(v.events, []);
-  assert.equal(v.members.length, 1);
+  assert.deepEqual(v.members, s.members, "Teammates need the name/role directory to assign tasks");
   assert.throws(
     () =>
       transition(
