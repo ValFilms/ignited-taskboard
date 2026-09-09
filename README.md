@@ -81,6 +81,20 @@ Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-job
 - For first activation, verify SQL, storage, login, form trigger, reminders and roles with test records before using real clients. No team invitations have been sent.
 - No live Supabase, Google Form, scheduler, email or push credentials are supplied in this repository.
 
+## Teammate onboarding
+
+First sign-in offers a short animated walkthrough tailored to the teammate's role.
+It covers tasks, assigning work, chat, mentions, and optional phone push setup,
+then ends with choosing a personal password. Finish later keeps setup incomplete;
+Settings offers a replay. Completed replays do not require another password change.
+
+No migration or new secret is required. The authenticated password endpoint sends
+the password and `ignited_onboarding_version: 1` metadata in one Supabase Auth
+update after checking the current password. A read-only `/api/onboarding` POST
+checks the signed-in member's saved preference, never a body-supplied account ID.
+This metadata controls only the tutorial, never authorization. Demo mode uses
+in-memory completion and sample passwords; test edits never reach real accounts.
+
 ## Team messenger
 
 Open Chat for the shared team conversation or select a teammate for private text messages. On phones, a conversation opens full-screen; use the back arrow to return to the list. Task details and client drawers include task comments with @mentions, including completed work. Inbox links open the relevant conversation. Messages use the existing authenticated workspace API and configured push sender, so no additional server or migration is needed.

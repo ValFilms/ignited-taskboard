@@ -80,6 +80,24 @@ migration or separate messaging service is required. API checks derive authors,
 times and recipients, and client message IDs make retries idempotent. The same
 single-record storage scale limits below apply to message history.
 
+## First-time teammate walkthrough
+
+After sign-in, teammates without a saved completion see a six-step animated
+walkthrough: welcome, role-specific daily work, mutual task assignment, chat and
+task mentions, optional device push setup, and personal password change. Practice
+assignments and replies are local examples and send nothing. The final step uses
+the existing verified-current-password flow and saves tutorial version 1 in Auth
+user metadata in the same password update. Invalid or failed changes leave setup
+incomplete. The completion preference follows the account across devices; it is
+not a permission or authorization control. Existing client data is not modified.
+
+Finish later or Escape dismisses the tutorial for this visit. It returns on the
+next sign-in/reload until completed. Settings can replay it; completed teammates
+do not have to change their password again to finish a replay. The native modal
+contains keyboard focus, restores focus on close, scrolls on small screens, and
+respects reduced-motion preferences. Device push remains opt-in and can be skipped.
+Demo completion is held only in memory and real passwords are never changed.
+
 ## Intake and external systems
 
 The Google Form is authoritative. GHL remains the separate sales system; Closebot booking remains external. No Stripe matching, roster import, automatic charging or client-specific checkout generation. Form response ID replays are ignored; matching email + business name with a different response ID requires manual duplicate review. Historical imports use historical=true and send no old assignment notices. Confirm actual Form/Sheet column names before wiring.

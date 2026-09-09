@@ -45,6 +45,7 @@ import TeamTask from "./team-task";
 import TeamChat, { TaskDiscussion } from "./team-chat";
 import PushSettings from "./push-settings";
 import PasswordSettings from "./password-settings";
+import WelcomeOnboarding from "./welcome-onboarding";
 import { parseDriveLink } from "../lib/drive-link";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -645,6 +646,14 @@ export default function Page() {
           </div>
         )}
         <main className={`content ${view === "chat" ? "messenger-content" : ""}`}>
+          <WelcomeOnboarding key={userId} member={me} configured={configured} showLauncher={view === "settings"} api={api} onFinish={() => {setView("work");setSelected(null);}} save={async values => {
+            const result = await api("/api/password", {...values, finishOnboarding: true});
+            try {
+              const session = await auth!.auth.setSession({access_token: result.access_token, refresh_token: result.refresh_token});
+              if (session.error) throw session.error;
+              return "Your password is saved and your walkthrough is complete.";
+            } catch { return "Your password and walkthrough are saved. Sign out and sign in with your new password to refresh this session."; }
+          }} />
           <div className="page-heading">
             <div>
               <p className="eyebrow">IGNITED CONTENT CO.</p>

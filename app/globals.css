@@ -1711,3 +1711,84 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .personal-phone-guide p { line-height: 1.6; }
 .personal-phone-guide a { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 760px) { .personal-phone-guide { padding: 14px 12px; } }
+/* One-time welcome: native modal focus containment, responsive cards, optional motion. */
+.welcome-launcher { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px; margin-bottom: 24px; }
+.welcome-launcher h2 { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin: 0; }
+.welcome-launcher p { margin-bottom: 0; }
+.welcome-launcher button { flex-shrink: 0; }
+.welcome-status { font-size: .9rem; }
+.welcome-dialog { width: min(680px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 40px); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); color: var(--ink); box-shadow: 0 32px 120px #0008; overflow-y: auto; overscroll-behavior: contain; }
+.welcome-dialog::backdrop { background: #000b; backdrop-filter: blur(8px); }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px 8px; }
+.welcome-brand { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; font-size: .85rem; letter-spacing: .08em; }
+.welcome-brand svg { color: var(--accent); }
+.welcome-dialog button { min-height: 44px; white-space: normal; }
+.welcome-dialog .icon-button { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; color: var(--muted); background: var(--raised); }
+.welcome-progress { padding: 8px 32px 0; }
+.welcome-progress > div { display: flex; justify-content: space-between; color: var(--muted); font: .65rem var(--mono); letter-spacing: .08em; margin-bottom: 12px; }
+.welcome-progress progress { display: block; width: 100%; height: 3px; border: 0; border-radius: 8px; background: var(--raised); accent-color: var(--accent); }
+.welcome-progress progress::-webkit-progress-bar { background: var(--raised); border-radius: 8px; }
+.welcome-progress progress::-webkit-progress-value { background: var(--accent); border-radius: 8px; transition: width .25s ease; }
+.welcome-progress progress::-moz-progress-bar { background: var(--accent); border-radius: 8px; }
+.welcome-body { padding: 28px 32px; animation: welcome-enter .3s ease-out both; overflow-wrap: anywhere; }
+.welcome-body h1 { font: 800 clamp(1.35rem, 4vw, 2rem)/1.2 var(--display); letter-spacing: -.035em; margin: 0 0 24px; text-transform: none; outline: none; }
+.welcome-body h2 { font: 700 1.15rem/1.4 Archivo, sans-serif; letter-spacing: -.02em; text-transform: none; margin: 20px 0 10px; }
+.welcome-body > p { line-height: 1.7; color: var(--muted); margin: 12px 0; }
+.welcome-body .panel { margin: 20px 0 0; background: var(--bg); }
+.welcome-body .panel-heading h2 { margin: 0; font-size: 1rem; }
+.welcome-body .settings-body { padding: 20px; }
+.welcome-body .settings-body input { font-size: 16px; }
+.welcome-body .settings-body p { line-height: 1.6; }
+.welcome-body .badge { max-width: 100%; white-space: normal; line-height: 1.5; }
+.welcome-art { position: relative; isolation: isolate; height: 176px; margin: 8px 0 24px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 18px; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 15%, transparent), transparent 72%); color: var(--accent); }
+.welcome-orbit { position: absolute; z-index: -1; border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 50%; width: 220px; height: 120px; transform: rotate(-25deg); }
+.orbit-two { width: 300px; height: 150px; transform: rotate(25deg); }
+.welcome-flame { animation: welcome-float 2s ease-in-out 2; }
+.welcome-float { display: flex; position: absolute; align-items: center; justify-content: center; width: 44px; height: 44px; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; color: var(--ink); animation: welcome-float 2s ease-in-out 2; }
+.float-one { left: 17%; top: 28px; animation-delay: -.7s; }
+.float-two { right: 14%; top: 44px; animation-delay: -1.2s; }
+.float-three { left: 28%; bottom: 8px; color: var(--accent); animation-delay: -.3s; }
+.welcome-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.welcome-chips span { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 24px; padding: 8px 12px; font-size: .8rem; }
+.welcome-chips svg { color: var(--accent); }
+.welcome-sample { padding: 20px; border: 1px solid var(--line); background: var(--bg); border-radius: 16px; margin: 12px 0 24px; }
+.welcome-sample-label { display: block; color: var(--muted); font: .6rem/1.6 var(--mono); letter-spacing: .08em; margin-bottom: 18px; }
+.welcome-task { display: flex; align-items: center; gap: 12px; }
+.welcome-task > svg { flex-shrink: 0; color: var(--accent); }
+.welcome-task > div { flex: 1; min-width: 0; }
+.welcome-task strong { display: block; font-size: .95rem; line-height: 1.5; }
+.welcome-task small { display: block; margin-top: 6px; color: var(--muted); line-height: 1.5; }
+.welcome-task-icon { display: flex; align-items: center; justify-content: center; background: var(--raised); color: var(--accent); flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; }
+.welcome-sample > button { margin-top: 20px; }
+.welcome-sample > small { display: block; margin-top: 12px; line-height: 1.5; }
+.welcome-check { animation: welcome-enter .3s ease-out; }
+.welcome-bubble { border-radius: 12px 12px 12px 2px; background: var(--raised); padding: 14px; width: fit-content; max-width: 90%; font-size: .9rem; }
+.welcome-bubble strong { color: var(--accent); font-size: .75rem; }
+.welcome-bubble p { margin: 6px 0 0; line-height: 1.5; }
+.welcome-bubble.outgoing { margin: 12px 0 0 auto; border-radius: 12px 12px 2px 12px; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); animation: welcome-enter .3s ease-out; }
+.welcome-bubble small { display: block; margin-top: 6px; color: var(--muted); }
+.welcome-success > svg { animation: welcome-enter .4s ease-out; }
+.welcome-footer { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 32px; background: var(--surface); border-top: 1px solid var(--line); z-index: 1; }
+.welcome-later { padding: 0 32px 18px; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+@keyframes welcome-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes welcome-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (max-width: 600px) {
+  .welcome-launcher { align-items: flex-start; flex-direction: column; padding: 16px; }
+  .welcome-dialog { width: 100%; max-height: 100dvh; height: 100dvh; border: 0; border-radius: 0; }
+  .welcome-top { padding: max(12px, env(safe-area-inset-top)) 16px 8px; }
+  .welcome-progress { padding: 8px 20px 0; }
+  .welcome-body { padding: 24px 20px; }
+  .welcome-body h1 { margin-bottom: 20px; }
+  .welcome-body h2 { font-size: 1.05rem; }
+  .welcome-body > p { font-size: .95rem; }
+  .welcome-art { height: 148px; }
+  .welcome-sample { padding: 16px; }
+  .welcome-body .settings-body { padding: 14px; }
+  .welcome-body .panel-heading { padding: 16px 14px; }
+  .welcome-footer { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); }
+  .welcome-later { padding: 0 20px max(16px, env(safe-area-inset-bottom)); }
+  .welcome-body .password-actions button, .welcome-body .push-actions button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-dialog *, .welcome-dialog *::before, .welcome-dialog *::after { animation: none !important; transition: none !important; }
+}
