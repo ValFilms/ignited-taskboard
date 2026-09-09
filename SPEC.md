@@ -46,8 +46,15 @@ Task assigners (the saved creator), Yaniv and Val (the manager and approver role
 may edit task titles, instructions, assignees and open-task deadlines, and delete
 or restore tasks. This applies to custom and workflow tasks. Workflow assignees
 must retain the matching role, review deadlines stay paused, and completed tasks
-keep their assignee and deadline. Editing cannot change a task's client, kind,
-creator, completion or approval state. Legacy workflow tasks without a recorded
+keep their assignee and deadline. Manually created custom tasks can change their
+client to another accessible, non-closed client or General team task, including
+after completion. Their ID, comments, assignee, deadline and completion stay intact
+unless another editable field is also changed. Omitting the client in an edit keeps
+the existing link; keeping an already-closed client is allowed. Client context and
+file access follow the new link under the existing visibility rules, and both old
+and new client activity record the move. Automatic editing, campaign, progress-update
+and campaign-linked Closebot tasks keep their original client. Editing cannot change
+a task's kind, creator, completion or approval state. Legacy workflow tasks without a recorded
 creator are managed by owners; new workflow assignments record the triggering
 owner, or the client owner for scheduled tasks. Receiving a task does not grant
 editing/deletion rights. All permissions are checked by the server.

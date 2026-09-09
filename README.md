@@ -113,8 +113,12 @@ Chat updates every five seconds while visible. Demo messages stay in that browse
 
 ## Edit tasks and use Archive
 
-Open a task and choose **Edit task** to change its title, instructions, assignee
-or deadline. For a client workflow task, open the client and choose **Edit or
+Open a task and choose **Edit task** to change its title, instructions, assignee,
+client or deadline. Tasks you create manually can switch from **General team task**
+to a client, between clients, or back to general, including after completion.
+Choose an accessible client that is not closed. The task keeps its comments,
+assignee, deadline and completion status. Automatic workflow tasks keep their
+original client. For a client workflow task, open the client and choose **Edit or
 delete task**. The person who assigned the task, Yaniv and Val can edit, delete
 and restore it. Task recipients can still complete their work and add comments.
 

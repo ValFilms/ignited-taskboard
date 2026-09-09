@@ -84,6 +84,34 @@ test('API regression with isolated Supabase transport', async t => {
       assert.equal((await workspace.POST(req(restore,'john'))).status,403);
       assert.equal((await workspace.POST(req(restore,'owner'))).status,200); assert.equal(state.tasks.at(-1)!.archivedAt,undefined);
     });
+    await t.test('task client edits enforce access and retain comments through the API', async () => {
+      reset();
+      await workspace.POST(req({type:'createTask',task:{title:'General request',assignee:'john',notes:'Keep details',dueAt:null}},'carl'));
+      let task=state.tasks.at(-1)!;
+      await workspace.POST(req({type:'sendMessage',message:{id:crypto.randomUUID(),body:'Keep this comment',target:{kind:'task',taskId:task.id}}},'john'));
+      const comments=structuredClone(state.messages), edit=(clientId:string)=>({type:'editTask',taskId:task.id,taskVersion:taskVersion(task),clientId,task:{title:task.title,assignee:task.assignee,notes:task.notes,dueAt:task.dueAt}});
+      const before=writes;
+      assert.equal((await workspace.POST(req(edit('demo-1'),'john'))).status,403);
+      assert.equal((await workspace.POST(req(edit('demo-6'),'carl'))).status,400);
+      assert.equal(writes,before);
+      assert.equal((await workspace.POST(req(edit('demo-2'),'carl'))).status,200); task=state.tasks.at(-1)!;
+      assert.equal(task.clientId,'demo-2'); assert.deepEqual(state.messages,comments);
+      let visible=await (await workspace.GET(req(undefined,'john'))).json();
+      assert(visible.clients.some((c:any)=>c.id==='demo-2')); assert.equal(visible.clients.find((c:any)=>c.id==='demo-2').email,'');
+      assert.equal((await workspace.POST(req(edit(''),'yaniv'))).status,200); task=state.tasks.at(-1)!;
+      visible=await (await workspace.GET(req(undefined,'john'))).json();
+      assert.equal(task.clientId,''); assert(!visible.clients.some((c:any)=>c.id==='demo-2'));
+      assert.equal(visible.messages.find((m:any)=>m.target.taskId===task.id).body,'Keep this comment');
+    });
+    await t.test('a client move retry rechecks whether the target client is still available', async () => {
+      reset();
+      await workspace.POST(req({type:'createTask',task:{title:'General request',assignee:'john',notes:'Original',dueAt:null}},'carl'));
+      const task=state.tasks.at(-1)!;
+      conflicts=1; onConflict=()=>{state.clients[2].stage='Closed';};
+      const result=await workspace.POST(req({type:'editTask',taskId:task.id,taskVersion:taskVersion(task),clientId:'demo-2',task:{title:task.title,notes:task.notes,assignee:task.assignee,dueAt:task.dueAt}},'carl'));
+      assert.equal(result.status,400); assert.match((await result.json()).error,/not closed/);
+      assert.equal(state.tasks.at(-1)!.clientId,''); assert.equal(state.clients[2].stage,'Closed');
+    });
     await t.test('an edit retry detects a concurrently changed task and preserves the newer details', async () => {
       reset();
       await workspace.POST(req({type:'createTask',task:{title:'Original task',notes:'Original',assignee:'john',dueAt:null}},'carl'));

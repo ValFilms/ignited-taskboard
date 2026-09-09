@@ -96,6 +96,7 @@ export const checklist = [
 export const isOwner = (m: Member) =>
   m.role === "approver" || m.role === "manager";
 export const canManageTask = (t: Task, m: Member) => isOwner(m) || t.createdBy === m.id;
+export const canChangeTaskClient = (t: Task) => t.kind === "custom" && !t.campaignTaskId;
 export const canAssignTask = (t: Task, m: Member) => t.kind === "custom" ||
   (t.kind === "update" ? isOwner(m) : m.role === (t.kind === "edit" ? "editor" : "campaign"));
 // Only task changes invalidate an open edit form; new comments do not.
@@ -291,6 +292,7 @@ export function transition(
     assert(canManageTask(t, m), "Only the task assigner or owners may edit, delete or restore this task");
     assert(a.taskVersion === taskVersion(t), "This task changed while you were working. Reopen it to review the latest details and try again.");
     const client = s.clients.find(c => c.id === t.clientId);
+    const previousClientId = t.clientId;
     const previousAssignee = t.assignee;
     if (a.type === "restoreTask") {
       assert(t.archivedAt, "Task is not archived");
@@ -317,6 +319,13 @@ export function transition(
         if (client?.stage === "Active" && t.kind === "update" && t.status !== "done" && (!client.nextUpdate || Date.parse(client.nextUpdate) <= now)) client.nextUpdate = iso(now + hours(84));
       } else {
         const data = a.task;
+        // Omitted client IDs from older edit forms preserve the existing link.
+        const clientId = a.clientId === undefined ? t.clientId : a.clientId;
+        assert(typeof clientId === "string", "Choose a valid client or General team task");
+        if (clientId !== t.clientId) {
+          assert(canChangeTaskClient(t), "Workflow tasks must stay linked to their original client");
+          assert(!clientId || visibleState(s, m).clients.some(c => c.id === clientId && c.stage !== "Closed"), "Choose an accessible client that is not closed");
+        }
         assert(data && typeof data.title === "string" && data.title.trim() && data.title.trim().length <= 160, "Enter a task title (up to 160 characters)");
         assert(typeof data?.notes === "string" && data.notes.length <= 4000, "Task notes must be at most 4000 characters");
         assert(s.members.some(member => member.id === data?.assignee && (data.assignee === t.assignee || canAssignTask(t, member))), "Choose a team member with the matching role");
@@ -329,6 +338,7 @@ export function transition(
         if (t.dueAt !== dueAt || t.assignee !== data!.assignee) t.cycle++;
         t.title = data!.title.trim(); t.notes = data!.notes!.trim();
         t.assignee = data!.assignee; t.dueAt = dueAt;
+        t.clientId = clientId;
       }
     }
     t.updatedAt = iso(now); t.updatedBy = m.id; t.revision = (t.revision || 0) + 1;
@@ -336,7 +346,14 @@ export function transition(
     for (const id of new Set([t.createdBy, t.assignee, previousAssignee])) {
       if (id && id !== m.id) notice(s, id, t.clientId, `${m.name} ${verb}: ${t.title}`, now, undefined, t.id);
     }
-    s.events.push({ id: crypto.randomUUID(), clientId: t.clientId, text: `${m.name} ${verb} task: ${t.title}`, at: iso(now) });
+    const moved = previousClientId !== t.clientId;
+    const clientName = (id: string) => s.clients.find(c => c.id === id)?.name || "General team task";
+    const text = moved
+      ? `${m.name} moved task: ${t.title} — ${clientName(previousClientId)} → ${clientName(t.clientId)}`
+      : `${m.name} ${verb} task: ${t.title}`;
+    for (const clientId of new Set(moved ? [previousClientId, t.clientId] : [t.clientId])) {
+      s.events.push({ id: crypto.randomUUID(), clientId, text, at: iso(now) });
+    }
     return s;
   }
   if (["createTask", "reassignTask", "completeTask", "reopenTask"].includes(a.type)) {

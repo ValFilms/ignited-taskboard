@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { Archive, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import type { Action, Member, State, Task } from "../lib/workflow";
-import { canAssignTask, canManageTask, isOwner, taskVersion } from "../lib/workflow";
+import { canAssignTask, canChangeTaskClient, canManageTask, isOwner, taskVersion } from "../lib/workflow";
 import Dialog from "./dialog";
 import { Conversation } from "./team-chat";
 
@@ -19,6 +19,7 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
 }) {
   const [busy, setBusy] = useState(false), [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null), [deleting, setDeleting] = useState<Task | null>(null);
+  const [editingClientId, setEditingClientId] = useState("");
   const sending = useRef(false);
   const run = async (action: Action, close = false) => {
     if (sending.current) return false;
@@ -34,7 +35,8 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
   const changed = !!editing && !!task && taskVersion(editing) !== taskVersion(task);
   const editForm = (snapshot: Task) => <form key={taskVersion(snapshot)} onSubmit={e => {
     e.preventDefault(); const data = new FormData(e.currentTarget), due = String(data.get("dueAt") || "");
-    void run({type: "editTask", taskId: snapshot.id, taskVersion: taskVersion(snapshot), task: {
+    void run({type: "editTask", taskId: snapshot.id, taskVersion: taskVersion(snapshot),
+      clientId: canChangeTaskClient(snapshot) ? editingClientId : snapshot.clientId, task: {
       title: String(data.get("title") || ""), notes: String(data.get("notes") || ""),
       assignee: snapshot.status === "done" ? snapshot.assignee : String(data.get("assignee")),
       dueAt: snapshot.status !== "open" || due === localDeadline(snapshot.dueAt) ? snapshot.dueAt : due ? new Date(due).toISOString() : null,
@@ -46,6 +48,13 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
       <label>Assign to<select aria-label="Assign to" name="assignee" defaultValue={snapshot.assignee} disabled={snapshot.status === "done"} required>
         {state.members.filter(m => m.id === snapshot.assignee || canAssignTask(snapshot, m)).map(m => <option value={m.id} key={m.id}>{m.name}</option>)}
       </select></label>
+      <label>Client<select name="clientId" value={editingClientId} onChange={e => setEditingClientId(e.target.value)} disabled={!canChangeTaskClient(snapshot)}>
+        <option value="">General team task</option>
+        {editingClientId && !state.clients.some(c => c.id === editingClientId) && <option value={editingClientId}>Unavailable client</option>}
+        {state.clients.filter(c => c.id === snapshot.clientId || c.id === editingClientId || canChangeTaskClient(snapshot) && c.stage !== "Closed")
+          .sort((a, b) => a.name.localeCompare(b.name)).map(c => <option key={c.id} value={c.id}>{c.name}{c.stage === "Closed" ? " (closed)" : ""}</option>)}
+      </select></label>
+      {!canChangeTaskClient(snapshot) && <p className="muted">This task is part of its client's workflow and stays linked to that client.</p>}
       <label>Instructions<textarea aria-label="Instructions" name="notes" maxLength={4000} rows={4} defaultValue={snapshot.notes || ""} /></label>
       <label>Due date (optional)<input type="datetime-local" name="dueAt" defaultValue={localDeadline(snapshot.dueAt)} disabled={snapshot.status !== "open"} /></label>
       <p className="muted">Times use your device’s timezone. {snapshot.status === "review" ? "The deadline stays paused during approval." : snapshot.status === "done" ? "Completed tasks keep their assignee and deadline." : "The original deadline stays unless you change it."}</p>
@@ -73,7 +82,7 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
           {manageable && <button className="primary" disabled={busy} onClick={() => void run({type: "restoreTask", taskId: task.id, taskVersion: taskVersion(task)}, true)}><RotateCcw size={17}/>{busy ? "Restoring…" : "Restore task"}</button>}
           {!manageable && <p className="muted">The task assigner or a workspace owner can restore it.</p>}
         </div></div> : <>
-          {manageable && <div className="task-management"><button className="secondary" disabled={busy} onClick={() => {setEditing(structuredClone(task)); setFailed(false);}}><Pencil size={17}/>Edit task</button><button className="danger-button" disabled={busy} onClick={() => {setDeleting(structuredClone(task)); setFailed(false);}}><Trash2 size={17}/>Delete task</button></div>}
+          {manageable && <div className="task-management"><button className="secondary" disabled={busy} onClick={() => {setEditing(structuredClone(task)); setEditingClientId(task.clientId); setFailed(false);}}><Pencil size={17}/>Edit task</button><button className="danger-button" disabled={busy} onClick={() => {setDeleting(structuredClone(task)); setFailed(false);}}><Trash2 size={17}/>Delete task</button></div>}
           {task.kind === "custom" && (isOwner(me) || task.assignee === me.id || task.createdBy === me.id) && <button data-tour="complete-task" className="primary" disabled={busy}
             onClick={() => void run({ type: task.status === "done" ? "reopenTask" : "completeTask", taskId: task.id })}>
             {busy ? "Saving…" : task.status === "done" ? "Reopen task" : "Mark complete"}
