@@ -13,6 +13,8 @@ function intakeRows() {
   if (!sheet) throw new Error('Intake tab not found');
   const range = sheet.getDataRange(), raw = range.getValues(), display = range.getDisplayValues();
   const headers = display[0].map(h => h.trim()), seen = {};
+  const ownerNameHeader = headers.find(h =>
+    h.replace(/\s+/g, ' ').toLowerCase() === 'business owner name');
   ['Timestamp', 'Business name', 'Business phone number'].forEach(h => {
     if (headers.indexOf(h) < 0) throw new Error('Missing column: ' + h);
   });
@@ -27,7 +29,8 @@ function intakeRows() {
     if (seen[sourceId]) throw new Error('Duplicate timestamp: review source rows');
     seen[sourceId] = true;
     if (!a['Business name']) throw new Error('Missing business name at row ' + (index + 2));
-    return { sourceId, name: a['Business name'], person: a['Person name'] || '',
+    return { sourceId, name: a['Business name'],
+      person: (ownerNameHeader && a[ownerNameHeader]) || a['Person name'] || '',
       email: a['Email'] || '', location: a['Location Shout Out'] || '',
       phone: a['Business phone number'] || '',
       offer: a["Agreed on promo we're running (Price)"] || '' };

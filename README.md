@@ -45,7 +45,22 @@ pushes and pull requests. `npm test` checks permissions and state transitions;
 
 The form-submit trigger processes new responses; a five-minute timer catches edits and retries failed requests while browsers are closed. Google controls actual trigger timing. Only changed rows are sent, and only successful responses are acknowledged. Reinstalling does not duplicate triggers. Existing rows are tagged as historical before the first run and produce no old onboarding notifications.
 
-Response IDs use the sheet ID, tab ID and original timestamp, so sorting rows and changing business details retain the same client. **Do not alter original response timestamps.** Duplicate timestamps stop the run for review. Deleting a sheet row does not delete its client or work history. Source details update in place; blank contact names/emails preserve any contact information filled in by an owner. Task assignments, stage, deadlines and approval history remain unchanged. Names/emails are currently absent from the Form; owners can complete them in the app.
+Response IDs use the sheet ID, tab ID and original timestamp, so sorting rows and changing business details retain the same client. **Do not alter original response timestamps.** Duplicate timestamps stop the run for review. Deleting a sheet row does not delete its client or work history. Source details update in place; blank contact names/emails preserve any contact information filled in by an owner. Task assignments, stage, deadlines and approval history remain unchanged.
+
+The Form's **Business owner name** column supplies the client's contact name
+(`person`) during onboarding. Matching tolerates capitalization and extra spaces
+in that column heading. A nonblank business owner name takes priority over the
+legacy **Person name** column; older responses can still use that legacy field.
+If both are blank, an existing contact name entered in the app is preserved.
+Email remains optional in the connected sheet mapping.
+
+This mapping runs in the existing private Apps Script project. Publishing the
+Next.js website does not update that Google script. Apply the focused change from
+`integrations/google-intake.gs` to the current script, preserving its other code,
+Script Properties, baseline, sync fingerprints and installed triggers. Do not
+create a second sync project or rerun initial setup just to change this mapping.
+Verify the next normal submission records the business owner as the contact and
+that the existing sync execution succeeds.
 
 Use Apps Script Executions and Script Properties `LAST_SUCCESS_AT` / `LAST_ERROR` to inspect sync health. A maximum of 50 changed rows is attempted per run; outstanding rows retry at the next interval. The separate `/api/cron` reminder scheduler is still configured independently.
 
@@ -57,14 +72,18 @@ Use a **form-bound** Apps Script project and an installable `onFormSubmit` trigg
 function onFormSubmit(e) {
   const props = PropertiesService.getScriptProperties();
   const answers = Object.fromEntries(e.response.getItemResponses().map(r =>
-    [r.getItem().getTitle(), String(r.getResponse())]));
-  const required = ['Business name', 'Person name', 'Email', 'General location'];
+    [r.getItem().getTitle(), String(r.getResponse()).trim()]));
+  const ownerNameTitle = Object.keys(answers).find(title =>
+    title.trim().replace(/\s+/g, ' ').toLowerCase() === 'business owner name');
+  const person = ((ownerNameTitle && answers[ownerNameTitle]) || answers['Person name'] || '').trim();
+  const required = ['Business name', 'Email', 'General location'];
   required.forEach(k => { if (!answers[k]) throw new Error('Missing mapped field: ' + k); });
+  if (!person) throw new Error('Missing business owner name');
   const response = UrlFetchApp.fetch(props.getProperty('APP_URL') + '/api/form', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: {Authorization: 'Bearer ' + props.getProperty('FORM_WEBHOOK_SECRET')},
     payload: JSON.stringify({sourceId: e.response.getId(), name: answers['Business name'],
-      person: answers['Person name'], email: answers['Email'], location: answers['General location']})
+      person, email: answers['Email'], location: answers['General location']})
   });
   if (response.getResponseCode() !== 200) throw new Error('Intake failed: ' + response.getResponseCode());
 }
