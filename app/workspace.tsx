@@ -174,7 +174,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
     if (me && !isOwner(me) && ["board", "approvals", "sales"].includes(view)) setView("work");
   }, [me, view]);
   useEffect(() => {
-    if (!all || !me) return;
+    if (!all || !me || practiceMember || onboardingBusy) return;
     const context = (
       document as unknown as {
         modelContext?: {
@@ -215,7 +215,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       /* Optional browser API. */
     }
     return () => lifecycle.abort();
-  }, [all, me]);
+  }, [all, me, practiceMember, onboardingBusy]);
   useEffect(() => {
     if (!selected) return;
     const previous = document.activeElement as HTMLElement | null;
