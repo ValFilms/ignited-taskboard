@@ -83,10 +83,15 @@ Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-job
 
 ## Teammate onboarding
 
-First sign-in offers a short animated walkthrough tailored to the teammate's role.
-It covers tasks, assigning work, chat, mentions, and optional phone push setup,
-then ends with choosing a personal password. Finish later keeps setup incomplete;
-Settings offers a replay. Completed replays do not require another password change.
+First sign-in offers a hands-on guided walkthrough tailored to the teammate's
+role. It highlights real controls and waits for the person to use them: open and
+complete a task, comment with a mention, assign work, complete role-specific
+delivery exercises, send team/private messages, and find inbox/profile settings.
+The same Workspace components run with separate fictional state, no authenticated
+transport, and no real uploads or notifications. A run is discarded on exit.
+After practice, a clearly marked account setup screen offers actual push settings
+and a personal password change. Settings can replay the walkthrough. Existing
+completion is respected; completed replays do not require another password change.
 
 No migration or new secret is required. The authenticated password endpoint sends
 the password and `ignited_onboarding_version: 1` metadata in one Supabase Auth

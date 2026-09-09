@@ -1792,3 +1792,39 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 @media (prefers-reduced-motion: reduce) {
   .welcome-dialog *, .welcome-dialog *::before, .welcome-dialog *::after { animation: none !important; transition: none !important; }
 }
+
+.practice-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); overflow: auto; overscroll-behavior: contain; }
+.practice-workspace { --guide-height: 220px; padding-top: var(--guide-height); }
+.practice-workspace > [data-guide-home] { position: fixed; inset: 0 0 auto; z-index: 100; }
+.practice-workspace .sidebar { top: var(--guide-height); height: calc(100dvh - var(--guide-height)); }
+.guided-coach { background: var(--surface); border-bottom: 2px solid var(--accent); padding: 14px 24px; color: var(--ink); text-align: left; }
+.guide-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.guide-heading-actions { display: flex; gap: 6px; }
+.guide-heading > span { display: flex; align-items: center; gap: 6px; font: .68rem var(--mono); letter-spacing: .05em; color: var(--muted); }
+.guided-coach .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--raised); color: var(--ink); }
+.guided-coach h2 { font: 700 1.1rem/1.4 Archivo, sans-serif; text-transform: none; margin: 2px 0 6px; letter-spacing: -.02em; outline: none; }
+.guided-coach p { margin: 0 0 12px; font-size: .93rem; line-height: 1.5; max-width: 1000px; overflow-wrap: anywhere; }
+.guide-controls { display: flex; gap: 8px; align-items: center; }
+.guide-controls button { min-height: 44px; white-space: normal; }
+.guide-controls .primary { margin-left: auto; }
+.guided-coach small { display: flex; gap: 6px; align-items: center; margin-top: 8px; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+.guided-coach small svg { flex-shrink: 0; color: var(--accent); }
+.practice-workspace .tour-highlight { outline: 3px solid var(--accent) !important; outline-offset: 3px; scroll-margin: calc(var(--guide-height) + 30px) 12px 60px; }
+.practice-workspace [data-guide-host]:not(:empty) { position: sticky; top: 0; z-index: 4; }
+.practice-workspace .task-dialog .drawer-top, .practice-workspace .drawer > .drawer-top { top: var(--guide-height); }
+.practice-workspace .task-dialog, .practice-workspace .drawer { scroll-padding-top: calc(var(--guide-height) + 60px); max-width: none; }
+.practice-workspace .topbar { position: sticky; top: 0; }
+.practice-workspace .content { scroll-padding-top: var(--guide-height); }
+@media (max-width: 760px) {
+  .practice-workspace .sidebar { top: auto; height: auto; }
+  .practice-workspace .topbar { top: var(--guide-height); }
+  .guided-coach { padding: 8px 12px 10px; }
+  .guided-coach h2 { font-size: 1rem; }
+  .guided-coach p { font-size: .85rem; margin-bottom: 8px; line-height: 1.45; }
+  .guide-heading > span { font-size: .6rem; }
+  .guide-controls { gap: 6px; }
+  .guide-controls button { padding: 8px 10px; font-size: .8rem; }
+  .guided-coach small { font-size: .7rem; }
+  .practice-workspace .chat-open { top: var(--guide-height); height: calc(var(--phone-chat-height, 100dvh) - var(--guide-height)); }
+  .practice-workspace .task-dialog { width: 100%; max-height: 100dvh; height: 100dvh; margin: 0; border-radius: 0; }
+}

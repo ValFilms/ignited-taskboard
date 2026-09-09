@@ -82,21 +82,34 @@ single-record storage scale limits below apply to message history.
 
 ## First-time teammate walkthrough
 
-After sign-in, teammates without a saved completion see a six-step animated
-walkthrough: welcome, role-specific daily work, mutual task assignment, chat and
-task mentions, optional device push setup, and personal password change. Practice
-assignments and replies are local examples and send nothing. The final step uses
-the existing verified-current-password flow and saves tutorial version 1 in Auth
-user metadata in the same password update. Invalid or failed changes leave setup
-incomplete. The completion preference follows the account across devices; it is
-not a permission or authorization control. Existing client data is not modified.
+After sign-in, teammates without a saved completion are offered a hands-on tour.
+The practice workspace renders the same Workspace, task dialogs, client drawer,
+chat and settings components as the app. A persistent guide highlights each real
+control; Next unlocks when the navigation or action succeeds. It covers received
+tasks, comments and mentions, completion, assigning to another teammate, tracking
+requested work, team/private chat, the inbox and profile/settings. Role-specific
+steps cover John’s Drive-folder submission, Karl’s campaign handoff, Yaniv’s
+onboarding/integration work, and Val’s checklist, revision, approval and launch.
+The upload and push steps explain the real controls without requiring external
+files or device permission in practice. The sample editor’s resubmission during
+the approval lesson is explicitly identified as a practice simulation.
 
-Finish later or Escape dismisses the tutorial for this visit. It returns on the
-next sign-in/reload until completed. Settings can replay it; completed teammates
-do not have to change their password again to finish a replay. The native modal
-contains keyboard focus, restores focus on close, scrolls on small screens, and
-respects reduced-motion preferences. Device push remains opt-in and can be skipped.
-Demo completion is held only in memory and real passwords are never changed.
+Practice uses a new fictional state per run and the normal workflow validator;
+it never calls workspace, Auth, file or push APIs. The original workspace is inert
+and its polling pauses while the tutorial is open. Practice messages/notices stay
+in memory, with pop-ups suppressed so they cannot cover the guide. Exit discards
+the run; Return to step helps recover after closing a dialog. The guide moves into
+native task dialogs/client drawers and compacts on phone input focus. Instructions
+can be expanded again. The base workspace components and permissions are shared.
+
+Finishing practice discards its state and explicitly returns to real account setup
+for optional device push and a personal password. The verified-current-password
+flow saves tutorial version 1 in Auth metadata in the same password update; invalid
+or failed changes leave setup incomplete. The preference follows the account and
+is never an authorization control. Completion from v5 is respected. Settings
+offers a replay, and completed teammates do not have to change their password again.
+Finish later leaves setup incomplete for the next sign-in/reload. Demo completion
+is in memory and real passwords are never changed.
 
 ## Intake and external systems
 

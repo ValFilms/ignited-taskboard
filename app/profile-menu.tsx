@@ -5,12 +5,13 @@ import ThemeToggle from "./theme-toggle";
 import type { Member } from "../lib/workflow";
 import { isOwner } from "../lib/workflow";
 
-export default function ProfileMenu({ me, navigate, signOut }: {
-  me: Member; navigate: (view: "work" | "settings" | "notifications" | "chat" | "sales") => void; signOut?: () => void;
+export default function ProfileMenu({ me, navigate, signOut, onOpenChange }: {
+  me: Member; navigate: (view: "work" | "settings" | "notifications" | "chat" | "sales") => void; signOut?: () => void; onOpenChange?: (open:boolean)=>void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
+  useEffect(()=>{onOpenChange?.(open);},[open,onOpenChange]);
   useEffect(() => {
     if (!open) return;
     const dismiss = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
@@ -20,7 +21,7 @@ export default function ProfileMenu({ me, navigate, signOut }: {
   }, [open]);
   const go = (view: "work" | "settings" | "notifications" | "chat" | "sales") => { setOpen(false); navigate(view); };
   return <div className="profile-control" ref={ref} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}>
-    <button className="profile-trigger" ref={button} aria-label="Open profile menu" aria-expanded={open} aria-controls="profile-options" onClick={() => setOpen(!open)}>
+    <button data-tour="profile" className="profile-trigger" ref={button} aria-label="Open profile menu" aria-expanded={open} aria-controls="profile-options" onClick={() => setOpen(!open)}>
       <span className="avatar small">{me.name.split(" ").map(n => n[0]).slice(0, 2).join("")}</span><ChevronDown size={14} />
     </button>
     {open && <div id="profile-options" className="profile-popover">
@@ -29,7 +30,7 @@ export default function ProfileMenu({ me, navigate, signOut }: {
       <button onClick={() => go("notifications")}><Bell size={18} />Inbox</button>
       <button onClick={() => go("chat")}><MessageCircle size={18} />Team chat</button>
       {isOwner(me) && <button onClick={() => go("sales")}><Users size={18} />Sales pipeline</button>}
-      <button onClick={() => go("settings")}><Settings size={18} />Settings & notifications</button>
+      <button data-tour="profile-settings" onClick={() => go("settings")}><Settings size={18} />Settings & notifications</button>
       <ThemeToggle />
       {signOut ? <button onClick={() => { setOpen(false); signOut(); }}><LogOut size={18} />Sign out</button> : <small className="demo-profile-note">Demo workspace · no account signed in</small>}
     </div>}

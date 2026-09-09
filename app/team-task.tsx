@@ -29,14 +29,14 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
         onChange={e => void run({ type: "reassignTask", taskId: task.id, value: e.target.value }, true)}>
         {state.members.map(m => <option value={m.id} key={m.id}>{m.name}</option>)}
       </select></label>
-      {(isOwner(me) || task.assignee === me.id || task.createdBy === me.id) && <button className="primary" disabled={busy}
+      {(isOwner(me) || task.assignee === me.id || task.createdBy === me.id) && <button data-tour="complete-task" className="primary" disabled={busy}
         onClick={() => void run({ type: task.status === "done" ? "reopenTask" : "completeTask", taskId: task.id })}>
         {busy ? "Saving…" : task.status === "done" ? "Reopen task" : "Mark complete"}
       </button>}
       <h3>Task comments</h3>
       <p className="muted">Visible to owners, the assignee, and the task creator.</p>
       <Conversation key={`${me.id}:${task.id}`} state={state} me={me} target={{kind: "task", taskId: task.id}} act={act} error={error} />
-    </> : <form onSubmit={e => {
+    </> : <form data-tour="task-form" onSubmit={e => {
       e.preventDefault(); const data = new FormData(e.currentTarget);
       const due = String(data.get("dueAt") || "");
       void run({ type: "createTask", clientId: String(data.get("clientId") || ""), task: {
