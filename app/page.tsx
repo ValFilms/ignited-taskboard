@@ -994,7 +994,7 @@ export default function Page() {
                   return "Your password was updated. Sign out and sign in with your new password to refresh this session.";
                 }
               }} />
-              <PushSettings configured={configured} api={api} />
+              <PushSettings key={userId} member={me} configured={configured} api={api} />
               <section className="panel">
                 <div className="panel-heading">
                   <h2>Connections</h2>

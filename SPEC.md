@@ -39,6 +39,13 @@ The demo validates sample input but never saves passwords. Forgotten-password
 recovery and changing another member's password are not part of this flow.
 Phone navigation stays at the bottom; client stages stack vertically on phones.
 Web Push device subscriptions and server delivery are described in [PUSH.md](docs/PUSH.md).
+Notification settings include personal setup instructions for the roster names
+Karl (Vivo Y04s, Android 15/Funtouch OS 15) and John (Galaxy A07, Android 16).
+These are the phones provided by the owner, not detected hardware. Instructions
+cover Chrome, Android permission, battery restrictions and a real-device delivery
+check. Enable/test controls and status always apply to the current device;
+Check device status rereads browser permission and the account's subscription
+after returning from phone settings. Other members retain the general guide.
 
 New clients default to the primary owner. Assignment to Yaniv is manual and reversible. Automatic load balancing was not confirmed. Daily campaign reminders and ad-refresh reminders are omitted. Task notices are in-app; approaching reminders go to assignee and primary owner six hours before deadline, overdue reminders at/after due. Each reminder has a stable task/cycle/recipient key to prevent duplicates. A five-minute external scheduler is required for unattended delivery. Deadlines use UTC elapsed time and display in each viewer's local timezone.
 

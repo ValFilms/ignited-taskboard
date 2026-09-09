@@ -1703,3 +1703,11 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 }
 
 .messenger-content > .page-heading { display: none; }
+
+.personal-phone-guide { margin: 20px 0; padding: 18px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; background: var(--raised); overflow-wrap: anywhere; }
+.personal-phone-guide h3 { margin: 0 0 8px; font-size: 1rem; line-height: 1.5; }
+.personal-phone-guide ol { padding-left: 22px; margin: 18px 0; }
+.personal-phone-guide li { padding-left: 4px; margin-bottom: 16px; line-height: 1.65; }
+.personal-phone-guide p { line-height: 1.6; }
+.personal-phone-guide a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 760px) { .personal-phone-guide { padding: 14px 12px; } }
