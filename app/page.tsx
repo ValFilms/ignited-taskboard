@@ -42,6 +42,7 @@ import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
 import TeamTask from "./team-task";
 import PushSettings from "./push-settings";
+import PasswordSettings from "./password-settings";
 import { parseDriveLink } from "../lib/drive-link";
 const configured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -971,6 +972,16 @@ export default function Page() {
                   <div className="appearance-setting"><span>Appearance</span><ThemeToggle /></div>
                 </div>
               </section>
+              <PasswordSettings key={me.id} configured={configured} save={async values => {
+                const session = await api("/api/password", values);
+                try {
+                  const result = await auth!.auth.setSession(session);
+                  if (result.error) throw result.error;
+                  return "Password updated. Use your new password the next time you sign in.";
+                } catch {
+                  return "Your password was updated. Sign out and sign in with your new password to refresh this session.";
+                }
+              }} />
               <PushSettings configured={configured} api={api} />
               <section className="panel">
                 <div className="panel-heading">

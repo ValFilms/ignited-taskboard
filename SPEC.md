@@ -31,6 +31,12 @@ Other people's unrelated tasks remain hidden. Custom tasks do not advance client
 stages or change the ad approval rules. Completion notifies the other participant.
 
 Profile controls open settings, the inbox, personal work, appearance and sign-out.
+Every teammate can change their own password in Settings using their current
+password, a new password of 8–256 characters, and matching confirmation. The
+server verifies team membership and reauthenticates the signed-in account before
+updating it through Supabase Auth. Usernames and assignments remain unchanged.
+The demo validates sample input but never saves passwords. Forgotten-password
+recovery and changing another member's password are not part of this flow.
 Phone navigation stays at the bottom; client stages stack vertically on phones.
 Web Push device subscriptions and server delivery are described in [PUSH.md](docs/PUSH.md).
 

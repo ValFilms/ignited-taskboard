@@ -1542,6 +1542,8 @@ h2, h3 { font-weight: 800; }
 .dialog-actions, .push-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
 .dialog-actions > button { flex: 1; }
 .task-title { margin: 16px 0; overflow-wrap: anywhere; line-height: 1.4; }
+.password-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.password-actions > button { flex: 1; }
 .task-notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .task-row strong, .task-row small, .notice, .drawer-heading h2 { overflow-wrap: anywhere; }
 .task-row > span:nth-child(2) { min-width: 0; }
