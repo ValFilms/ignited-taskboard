@@ -28,6 +28,14 @@ Bare `gh` still uses the machine's shared default, so agents must use `git githu
 
 ## Your everyday workflow
 
+Every new or resumed task starts with a mandatory update check, including small
+fixes and documentation changes. Both agents fetch the latest branches and tags,
+review incoming work and current instructions, check the live version, and report
+the result before editing. New work starts from the latest main; ongoing work
+incorporates incoming changes without discarding anyone's work. A failed fetch
+stops edits until the check succeeds. They check again before validation and pushes.
+Status-only requests inspect the latest state without merging anything.
+
 | You say | Codex does |
 | --- | --- |
 | "Add a calendar" | Announces "Staging v8 now", using the actual next number, then prepares the change separately. |

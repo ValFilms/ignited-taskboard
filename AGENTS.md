@@ -23,23 +23,61 @@ live version while retaining their commits and saved versions. Do not interpret
 this request as selectively undoing the user's latest change. Either collaborator
 may release; no approval from the other person is required.
 
-## Starting and continuing work
+## Mandatory update check before every task
 
-1. Check the working tree and project account using `git github identity`.
+This is required for **both Codex and Claude Code**, before every new request and
+before resuming paused work, including small fixes, documentation and instruction
+changes. A check from an earlier conversation or turn does not count. Perform only
+the inspection/authentication needed for this check before starting task work.
+
+1. Inspect `git status --short --branch` and `git worktree list`, then verify the
+   project account using `git github identity`.
    For this project the owners authorized the actual **ValFilms** account.
    Follow the account-isolation rules below. Preserve uncommitted work and all
    existing commit authorship.
-2. Run `npm run versions -- history` to inspect saved/staged versions and the live
+2. Run `git fetch origin --prune --tags` successfully using the project account.
+   If authentication or fetching fails, stop edits, commits and pushes; report the
+   failure and continue only read-only diagnosis until a fresh fetch succeeds.
+   Cached remote references are not evidence that there are no updates.
+3. Compare the working branch with freshly fetched `origin/main` and its own
+   remote branch, if one exists. Review incoming commits and changed files, and
+   inspect other updated remote branches for overlapping work. Read the latest
+   `AGENTS.md`, `CLAUDE.md` and relevant project documentation from `origin/main`
+   and the working branch's remote before editing. Use `git show <ref>:<path>`
+   when those instructions are not yet in the checkout.
+4. Start new work from the latest `origin/main`. For ongoing work, incorporate
+   incoming changes from its remote branch and `origin/main` before further edits,
+   retaining the staged version marker. Preserve local work; use a separate
+   worktree if necessary. Never discard, silently stash, force-push, or overwrite
+   another person's work to synchronize. Resolve clear conflicts; ask only when
+   the intended behavior is ambiguous. Inspect unfinished branches without
+   automatically merging them. Numbered restores follow the restore procedure
+   below: current main is the parent, while the saved app file tree stays exact.
+5. Run `npm run versions -- history` to inspect saved/staged versions and the live
    endpoint. A failed endpoint lookup means live status is unknown, not v0 or v1.
-3. For a new task, run `npm run versions -- stage <description>` from a clean
+6. Briefly report whether updates were found and what base the work will use
+   before editing. Repeat the fetch/comparison after a pause or new request, and
+   before final validation, pushing staged work, and publishing. If new changes
+   alter the candidate, incorporate them and validate the new candidate; a changed
+   preview still needs the owner's go-live instruction as described below.
+
+For a read-only status request, fetch and inspect the latest remote/live state
+without merging or changing the checkout. Pure explanations of an already-known
+fact do not require a fetch. Never claim current project status from stale data.
+
+## Starting and continuing work
+
+Complete the mandatory update check above first.
+
+1. For a new task, run `npm run versions -- stage <description>` from a clean
    checkout/worktree. It fetches current `origin/main`, reserves the next shared
    number in `staging/vN`, creates a separate branch, and commits `release.json`.
    Announce the returned staging number before editing feature code.
-4. To adopt already-prepared work on a separate branch, use `stage --current`.
+2. To adopt already-prepared work on a separate branch, use `stage --current`.
    Continuing the same unshipped batch retains its number. Use separate worktrees
    for concurrent tasks; never share a mutable branch. Numbers are never reused,
    including after an abandoned stage or rollback.
-5. Make coherent commits and push only the working branch during staging. A pull
+3. Make coherent commits and push only the working branch during staging. A pull
    request is optional history, not a mandatory partner-approval step. Never turn
    on auto-merge while waiting for the user's "go live" instruction.
 

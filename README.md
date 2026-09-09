@@ -4,6 +4,11 @@ Next.js app for Ignited Content Co. See [SPEC.md](SPEC.md) for workflow and acce
 
 ## Working together
 
+Before every new task or resumed task, Codex and Claude Code must fetch the latest
+GitHub updates, review changes and current project instructions, and safely bring
+ongoing work up to date before editing. They report what they found and stop edits
+if the update check fails. This also applies to small fixes and rule changes.
+
 Describe changes to Codex. It announces **Staging vN** before editing and provides
 a preview link for you to test. Say **go live** after testing to publish that exact
 version, or **revert to vN** to restore a saved app version. The shared
