@@ -37,6 +37,8 @@ export function sendMessage(state: State, member: Member, input: MessageInput | 
   if (!input || typeof input.id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(input.id)) throw new Error("Invalid message ID");
   if (typeof input.body !== "string" || !input.body.trim() || input.body.length > 4000) throw new Error("Enter a message of up to 4,000 characters");
   const recipients = conversationMembers(state, member, input.target);
+  const taskId = input.target.kind === "task" ? input.target.taskId : undefined;
+  if (taskId && state.tasks.find(t => t.id === taskId)?.archivedAt) throw new Error("Restore this task from Archive before adding comments");
   const target: MessageTarget = input.target.kind === "team" ? {kind: "team"} : input.target.kind === "direct" ? {kind: "direct", memberId: input.target.memberId} : {kind: "task", taskId: input.target.taskId};
   const body = input.body.trim(), threadId = threadKey(target, member.id);
   const existing = state.messages?.find(m => m.id === input.id);

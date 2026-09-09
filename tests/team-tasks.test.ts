@@ -36,12 +36,13 @@ test("Custom completion notifies creator, reopens, and never advances the delive
   s = transition(s, s.members[3], { type: "reopenTask", taskId: id }, now + 2);
   assert.equal(s.tasks.at(-1)!.status, "open"); assert.equal(s.tasks.at(-1)!.cycle, 1); assert.deepEqual(s.clients, clients);
 });
-test("Any participant can hand off a custom task without moving its deadline", () => {
+test("The assigner and owners can hand off a custom task; its assignee cannot edit it", () => {
   let s = demoState(); s = transition(s, s.members[3], { type: "createTask", task }, now);
   const id = s.tasks.at(-1)!.id;
   s = transition(s, s.members[0], { type: "reassignTask", taskId: id, value: "john" }, now + 1);
   assert.equal(s.tasks.at(-1)!.assignee, "john"); assert.equal(s.tasks.at(-1)!.dueAt, task.dueAt);
-  s = transition(s, s.members[2], { type: "reassignTask", taskId: id, value: "yaniv" }, now + 2);
+  assert.throws(() => transition(s, s.members[2], { type: "reassignTask", taskId: id, value: "yaniv" }, now + 2), /Only the task assigner/);
+  s = transition(s, s.members[3], { type: "reassignTask", taskId: id, value: "yaniv" }, now + 2);
   assert.equal(s.tasks.at(-1)!.assignee, "yaniv");
   assert(!visibleState(s, s.members[2]).tasks.some(t => t.id === id));
   assert(visibleState(s, s.members[3]).tasks.some(t => t.id === id));

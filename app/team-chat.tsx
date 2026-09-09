@@ -26,6 +26,7 @@ export function Conversation({ state, me, target, act, error, drafts }: Props & 
     if (el) {el.style.height = "46px"; el.style.height = `${Math.min(el.scrollHeight,160)}px`;}
   }, [body, drafts, thread]);
   const messages = (state.messages || []).filter(m => m.threadId === thread);
+  const archived = target.kind === "task" && !!state.tasks.find(t => t.id === target.taskId)?.archivedAt;
   const unread = state.notifications.filter(n => n.threadId === thread && !n.read);
   const lastId = messages.at(-1)?.id;
   const markRead = () => {
@@ -46,7 +47,7 @@ export function Conversation({ state, me, target, act, error, drafts }: Props & 
   try { members = conversationMembers(state, me, target); }
   catch { return <p role="status">This conversation is no longer available to your account.</p>; }
   const send = async () => {
-    if (sending.current || !body.trim()) return;
+    if (sending.current || !body.trim() || archived) return;
     sending.current = true; setBusy(true); setFailed(false);
     if (pending.current?.body !== body) pending.current = {id: crypto.randomUUID(), body};
     try {
@@ -67,7 +68,7 @@ export function Conversation({ state, me, target, act, error, drafts }: Props & 
         <time dateTime={message.createdAt} title={new Date(message.createdAt).toLocaleString()}>{new Date(message.createdAt).toLocaleString(undefined, {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}</time>
       </article>)}
     </div>
-    <form className="message-composer" onSubmit={e => {e.preventDefault(); void send();}}>
+    {archived ? <p className="muted archive-comment-note">Comments are saved. Restore the task to continue the conversation.</p> : <form className="message-composer" onSubmit={e => {e.preventDefault(); void send();}}>
       {mentionOpen && <div className="mention-options" aria-label="Mention a teammate">{members.filter(m => m.id !== me.id).map(m => <button type="button" key={m.id} disabled={busy} onClick={() => {
         setBody(old => `${old}${old && !/\s$/.test(old) ? " " : ""}@${mentionName(m)} `.slice(0,4000)); setMentionOpen(false); textarea.current?.focus();
       }}>@{mentionName(m)}</button>)}</div>}
@@ -78,7 +79,7 @@ export function Conversation({ state, me, target, act, error, drafts }: Props & 
       <button className="chat-send" aria-label={target.kind === "task" ? "Post comment" : "Send message"} onMouseDown={e=>e.preventDefault()} disabled={busy || !body.trim()}><Send size={20}/></button></div>
       {body.length > 3600 && <small className="muted">{body.length}/4,000</small>}
       {failed && <p className="error" role="alert">{error || "Could not save. Your message is still here; try again."}</p>}
-    </form>
+    </form>}
   </section>;
 }
 

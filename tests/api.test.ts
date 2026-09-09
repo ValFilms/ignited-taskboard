@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { demoState } from '../lib/demo';
+import { taskVersion } from '../lib/workflow';
 import * as workspace from '../app/api/workspace/route';
 import * as files from '../app/api/files/route';
 import * as login from '../app/api/login/route';
@@ -15,7 +16,8 @@ test('API regression with isolated Supabase transport', async t => {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-public', SUPABASE_SERVICE_ROLE_KEY: 'test-private',
     FORM_WEBHOOK_SECRET: 'test-form', CRON_SECRET: 'test-cron' });
   let state = demoState(), version = 1, conflicts = 0, writes = 0, storage: any[] = [];
-  const reset = () => { state = demoState(); version = 1; conflicts = 0; writes = 0; storage = []; };
+  let onConflict: (() => void) | undefined;
+  const reset = () => { state = demoState(); version = 1; conflicts = 0; writes = 0; storage = []; onConflict = undefined; };
   const user = (id: string) => ({ id, email: id + '@example.test', aud: 'authenticated', role: 'authenticated', created_at: new Date().toISOString() });
   globalThis.fetch = async (input, init) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
@@ -33,7 +35,7 @@ test('API regression with isolated Supabase transport', async t => {
     if (url.pathname === '/rest/v1/workspace') {
       if (init?.method === 'PATCH') {
         writes++;
-        if (conflicts-- > 0) { version++; state.clients[0].offer = 'Concurrent change'; return Response.json([]); }
+        if (conflicts-- > 0) { version++; state.clients[0].offer = 'Concurrent change'; onConflict?.(); return Response.json([]); }
         assert.equal(url.searchParams.get('version'), 'eq.' + version);
         state = body.data; version = body.version; return Response.json([{version}]);
       }
@@ -64,6 +66,32 @@ test('API regression with isolated Supabase transport', async t => {
     });
     await t.test('compare-and-swap exhaustion reports failure',async()=>{
       reset(); conflicts=5; assert.equal((await workspace.POST(req({type:'profile',clientId:'demo-1',profile:{phone:'123'}}))).status,400); assert.equal(writes,5); assert.equal(state.clients[1].phone,'');
+    });
+    await t.test('task editing and archiving enforce the authenticated assigner and owner permissions', async () => {
+      reset();
+      assert.equal((await workspace.POST(req({type:'createTask', task:{title:'API task',assignee:'john',notes:'Original',dueAt:null}},'carl'))).status,200);
+      let task = state.tasks.at(-1)!;
+      const change = {type:'editTask',taskId:task.id,taskVersion:taskVersion(task),task:{title:'Edited through API',assignee:'john',notes:'Changed',dueAt:null}};
+      const before = writes;
+      assert.equal((await workspace.POST(req({...change,role:'approver',userId:'owner'},'john'))).status,403); assert.equal(writes,before);
+      assert.equal((await workspace.POST(req(change,'carl'))).status,200); task=state.tasks.at(-1)!;
+      const archive={type:'archiveTask',taskId:task.id,taskVersion:taskVersion(task)};
+      assert.equal((await workspace.POST(req(archive,'john'))).status,403);
+      assert.equal((await workspace.POST(req(archive,'yaniv'))).status,200); task=state.tasks.at(-1)!;
+      assert.equal(task.archivedBy,'yaniv'); assert.equal(task.title,'Edited through API');
+      assert.equal((await workspace.POST(req({type:'completeTask',taskId:task.id},'john'))).status,400);
+      const restore={type:'restoreTask',taskId:task.id,taskVersion:taskVersion(task)};
+      assert.equal((await workspace.POST(req(restore,'john'))).status,403);
+      assert.equal((await workspace.POST(req(restore,'owner'))).status,200); assert.equal(state.tasks.at(-1)!.archivedAt,undefined);
+    });
+    await t.test('an edit retry detects a concurrently changed task and preserves the newer details', async () => {
+      reset();
+      await workspace.POST(req({type:'createTask',task:{title:'Original task',notes:'Original',assignee:'john',dueAt:null}},'carl'));
+      const task=state.tasks.at(-1)!;
+      conflicts=1; onConflict=()=>{state.tasks.at(-1)!.notes='Newer teammate instructions';};
+      const result=await workspace.POST(req({type:'editTask',taskId:task.id,taskVersion:taskVersion(task),task:{title:'Old draft',notes:'Stale notes',assignee:'john',dueAt:null}},'carl'));
+      assert.equal(result.status,400); assert.match((await result.json()).error,/changed while/);
+      assert.equal(state.tasks.at(-1)!.title,'Original task'); assert.equal(state.tasks.at(-1)!.notes,'Newer teammate instructions');
     });
     await t.test('message API derives identity, retries CAS and keeps private data out of other responses',async()=>{
       reset(); conflicts=2;

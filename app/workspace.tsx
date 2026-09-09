@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
+  Archive,
   Bell,
   MessageCircle,
   Check,
@@ -31,6 +32,7 @@ import {
   State,
   Task,
   checklist,
+  canManageTask,
   isOwner,
   stages,
   transition,
@@ -49,6 +51,7 @@ import WelcomeOnboarding from "./welcome-onboarding";
 import GuidedCoach from "./guided-coach";
 import { practiceId, practiceState, practiceAction, tourSteps, actionMilestones } from "../lib/guided-tour";
 import { parseDriveLink } from "../lib/drive-link";
+import { tasksForView } from "../lib/task-views";
 const serverConfigured =
   !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -72,6 +75,7 @@ function date(value?: string | null) {
 }
 function due(t?: Task) {
   if (!t) return "Next step ready";
+  if (t.archivedAt) return "Archived";
   if (t.status === "review") return "Clock paused";
   if (t.status === "done") return "Complete";
   if (!t.dueAt) return "No deadline";
@@ -96,6 +100,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
   const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string } | null>(null);
   const [taskFilter, setTaskFilter] = useState("mine");
+  const [archiveQuery, setArchiveQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const changes = useRef(0);
   const currentUser = useRef("");
@@ -470,18 +475,19 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   );
   const current = s.clients.find((c) => c.id === selected);
   const reviewLink = parseDriveLink(current?.driveUrl);
-  const approvals = s.clients.filter((c) => c.stage === "In review");
-  const openTasks = s.tasks.filter((t) => t.status !== "done");
+  const approvals = s.clients.filter((c) => c.stage === "In review" && s.tasks.some(t => t.clientId === c.id && t.status === "review" && !t.archivedAt));
+  const openTasks = s.tasks.filter((t) => t.status !== "done" && !t.archivedAt);
   const mine = openTasks.filter((t) => t.assignee === me.id);
   const overdue = openTasks.filter(
     (t) => t.dueAt && Date.parse(t.dueAt) < Date.now(),
   );
-  const workTasks = s.tasks.filter(t => taskFilter === "completed" ? t.status === "done" :
-    t.status !== "done" && (taskFilter === "all" || taskFilter === "overdue" && !!t.dueAt && Date.parse(t.dueAt) < Date.now() ||
-    taskFilter === "sent" && t.createdBy === me.id || taskFilter === "mine" && t.assignee === me.id));
+  const archivedTasks = tasksForView(s.tasks, me.id, "archive");
+  const workTasks = tasksForView(s.tasks, me.id, taskFilter).filter(t => taskFilter !== "archive" ||
+    `${t.title} ${t.notes || ""} ${s.clients.find(c => c.id === t.clientId)?.name || ""} ${s.members.find(m => m.id === t.assignee)?.name || ""}`.toLowerCase().includes(archiveQuery.trim().toLowerCase()));
   const openNotice = (n: State["notifications"][number]) => {
     const task = s.tasks.find(t => t.id === n.taskId);
-    if (n.messageId && task) setCommentTaskId(task.id);
+    if (task?.archivedAt) { setTaskFilter("archive"); setView("work"); setSelected(null); setTaskDialog({id: task.id}); }
+    else if (n.messageId && task) setCommentTaskId(task.id);
     else if (n.messageId && n.threadId) { setSelected(null); setChatThread(n.threadId); setView("chat"); }
     else if (task?.kind === "custom") setTaskDialog({ id: task.id });
     else if (n.clientId) setSelected(n.clientId);
@@ -525,13 +531,13 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       data-tour-task={t.id}
       className="task-row"
       onClick={() => {
-        if (t.kind === "custom") setTaskDialog({ id: t.id });
+        if (t.kind === "custom" || t.archivedAt || t.status === "done") setTaskDialog({ id: t.id });
         else setSelected(t.clientId);
         setValue("");
       }}
     >
       <span className={`task-symbol ${t.status === "review" ? "purple" : ""}`}>
-        {t.status === "review" ? (
+        {t.archivedAt ? <Archive size={18} /> : t.status === "review" ? (
           <Pause size={18} />
         ) : (
           <CheckCircle2 size={18} />
@@ -543,7 +549,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       </span>
       <span className="task-date">
         {due(t)}
-        <small>{t.dueAt ? date(t.dueAt) : t.status === "review" ? "Paused for approval" : ""}</small>
+        <small>{t.archivedAt ? date(t.archivedAt) : t.dueAt ? date(t.dueAt) : t.status === "review" ? "Paused for approval" : ""}</small>
       </span>
       <ChevronRight size={18} />
     </button>
@@ -909,19 +915,20 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           {view === "work" && (
             <div className="panel">
               <div className="panel-heading">
-                <h2>Team tasks</h2>
+                <h2>{taskFilter === "archive" ? "Task archive" : "Team tasks"}</h2>
                 <button className="primary" onClick={() => { setError(""); setTaskDialog({}); }}><Plus size={18} />New task</button>
               </div>
               <div className="task-filters" aria-label="Task filters">
-                {[["mine", "Assigned to me"], ["sent", "Assigned by me"], ...(owner ? [["all", "All open"], ["overdue", "Overdue"]] : []), ["completed", "Completed"]].map(([id, label]) =>
+                {[["mine", "Assigned to me"], ["sent", "Assigned by me"], ...(owner ? [["all", "All open"], ["overdue", "Overdue"]] : []), ["completed", "Completed"], ["archive", `Archive (${archivedTasks.length})`]].map(([id, label]) =>
                   <button data-tour={`filter-${id}`} key={id} aria-pressed={taskFilter === id} onClick={() => setTaskFilter(id)}>{label}</button>)}
               </div>
+              {taskFilter === "archive" && <div className="archive-heading"><p>Deleted tasks are saved here with their details and comments. Task assigners and workspace owners can restore them.</p><label className="archive-search"><Search size={18}/><input aria-label="Search archived tasks" placeholder="Search archived tasks" value={archiveQuery} onChange={e => setArchiveQuery(e.target.value)}/></label></div>}
               {workTasks.map(taskCard)}
               {!workTasks.length && (
                 <div className="empty">
                   <CheckCircle2 />
-                  <h3>No tasks in this view.</h3>
-                  <p>Create a task for yourself or any teammate.</p>
+                  <h3>{taskFilter === "archive" ? archiveQuery ? "No archived tasks match your search." : "Your archive is empty." : "No tasks in this view."}</h3>
+                  <p>{taskFilter === "archive" ? "Deleted tasks will appear here so they can be restored." : "Create a task for yourself or any teammate."}</p>
                 </div>
               )}
             </div>
@@ -932,7 +939,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                 <h2>Ready for review</h2>
                 <span>Editing clocks are paused</span>
               </div>
-              {s.tasks.filter((t) => t.status === "review").map(taskCard)}
+              {s.tasks.filter((t) => t.status === "review" && !t.archivedAt).map(taskCard)}
               {!approvals.length && (
                 <div className="empty">
                   <CheckCircle2 />
@@ -1308,13 +1315,14 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                 </a>
               </section>}
               {s.tasks
-                .filter((t) => t.clientId === current.id && t.status !== "done" && t.kind !== "custom")
+                .filter((t) => t.clientId === current.id && t.status !== "done" && t.kind !== "custom" && !t.archivedAt)
                 .map((t) => (
                   <section className="detail-section" key={t.id}>
                     <div className="section-title">
                       <h3>{t.title}</h3>
                       <span className="badge">{due(t)}</span>
                     </div>
+                    {canManageTask(t, me) && <button className="secondary" onClick={() => {setError(""); setTaskDialog({id: t.id});}}>Edit or delete task</button>}
                     <p className="muted">
                       {s.members.find((m) => m.id === t.assignee)?.name ||
                         "Assigned team member"}{" "}
@@ -1453,7 +1461,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                     )}
                   </section>
                 ))}
-              {s.tasks.some(t => t.clientId === current.id && t.kind === "custom") && <section className="detail-section"><h3>Team tasks</h3>{s.tasks.filter(t => t.clientId === current.id && t.kind === "custom").map(taskCard)}</section>}
+              {s.tasks.some(t => t.clientId === current.id && t.kind === "custom" && !t.archivedAt) && <section className="detail-section"><h3>Team tasks</h3>{s.tasks.filter(t => t.clientId === current.id && t.kind === "custom" && !t.archivedAt).map(taskCard)}</section>}
+              {s.tasks.some(t => t.clientId === current.id && t.archivedAt) && <section className="detail-section"><h3>Archived tasks</h3><p className="muted">Workflow tasks must be restored before their step can continue.</p>{s.tasks.filter(t => t.clientId === current.id && t.archivedAt).map(taskCard)}</section>}
               {current.stage === "Ready to launch" && owner && (
                 <section className="detail-section">
                   <h3>Launch checklist</h3>
@@ -1526,7 +1535,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               <section className="detail-section">
                 <h3>Task comments</h3>
                 <p className="muted">Discuss any task, including completed work.</p>
-                <div className="task-discussion-links">{s.tasks.filter(t => t.clientId === current.id).map(t => <button key={t.id} className="secondary" onClick={() => setCommentTaskId(t.id)}>{t.title}{t.status === "done" ? " · Completed" : ""} · {(s.messages || []).filter(m => m.target.kind === "task" && m.target.taskId === t.id).length} comments</button>)}</div>
+                <div className="task-discussion-links">{s.tasks.filter(t => t.clientId === current.id && !t.archivedAt).map(t => <button key={t.id} className="secondary" onClick={() => setCommentTaskId(t.id)}>{t.title}{t.status === "done" ? " · Completed" : ""} · {(s.messages || []).filter(m => m.target.kind === "task" && m.target.taskId === t.id).length} comments</button>)}</div>
               </section>
               <section className="detail-section">
                 <h3>Business context</h3>
@@ -1603,7 +1612,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           </section>
         </div>
       )}
-      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} />}
+      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} onOpenClient={id => {setTaskDialog(null); setSelected(id);}} />}
       {commentTaskId && <TaskDiscussion key={`${userId}:${commentTaskId}`} state={s} me={me} taskId={commentTaskId} act={act} error={error} onClose={() => setCommentTaskId(null)} />}
       {!practiceMember&&<NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />}
     </div>

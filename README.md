@@ -110,3 +110,17 @@ in-memory completion and sample passwords; test edits never reach real accounts.
 Open Chat for the shared team conversation or select a teammate for private text messages. On phones, a conversation opens full-screen; use the back arrow to return to the list. Task details and client drawers include task comments with @mentions, including completed work. Inbox links open the relevant conversation. Messages use the existing authenticated workspace API and configured push sender, so no additional server or migration is needed.
 
 Chat updates every five seconds while visible. Demo messages stay in that browser session and never notify real teammates. The first messaging version supports text only; see SPEC.md for access rules and limits.
+
+## Edit tasks and use Archive
+
+Open a task and choose **Edit task** to change its title, instructions, assignee
+or deadline. For a client workflow task, open the client and choose **Edit or
+delete task**. The person who assigned the task, Yaniv and Val can edit, delete
+and restore it. Task recipients can still complete their work and add comments.
+
+**Delete task** moves it to **My work → Archive** after confirmation. Search the
+archive, open a task and choose **Restore task** to bring it back with its original
+details and comments. Archived tasks stop reminders and leave active task lists;
+their comments stay readable. Workflow restoration checks the current client step
+to avoid duplicate work. If someone changes a task while its edit form is open,
+the app asks you to review the newer details before saving.

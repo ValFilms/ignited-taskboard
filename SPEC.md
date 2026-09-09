@@ -23,12 +23,44 @@ The primary owner is the only ad approver. Yaniv is a manager with full board, c
 All configured teammates may create custom tasks for any teammate, including
 themselves. A custom task can be general or linked to a currently accessible,
 non-closed client, with a required title, optional instructions and optional future
-deadline. The creator, assignee and owners can reassign, complete or reopen it.
+deadline. The creator and owners can edit or reassign it; the creator, assignee
+and owners can complete or reopen it.
 Creators retain visibility of tasks they requested; assignees receive the related
 client context with the same private-field redaction as existing staff access.
 The name/role directory is visible to every teammate for choosing assignees.
 Other people's unrelated tasks remain hidden. Custom tasks do not advance client
 stages or change the ad approval rules. Completion notifies the other participant.
+
+Task assigners (the saved creator), Yaniv and Val (the manager and approver roles)
+may edit task titles, instructions, assignees and open-task deadlines, and delete
+or restore tasks. This applies to custom and workflow tasks. Workflow assignees
+must retain the matching role, review deadlines stay paused, and completed tasks
+keep their assignee and deadline. Editing cannot change a task's client, kind,
+creator, completion or approval state. Legacy workflow tasks without a recorded
+creator are managed by owners; new workflow assignments record the triggering
+owner, or the client owner for scheduled tasks. Receiving a task does not grant
+editing/deletion rights. All permissions are checked by the server.
+
+Delete moves a task into **My work → Archive** after confirmation. Optional archive
+metadata stays with the original task; nothing is permanently erased. Archived
+tasks keep their original status, deadline, assignment and comments, but leave
+active/completed lists, approval queues and task counts. Their reminders and pending
+task notifications stop. Comments remain readable under the same visibility rules
+and are read-only until restoration. Archive supports search and newest-first order.
+The task's assigner and both owners can restore it; other participants can read it.
+
+Archiving a workflow task does not advance the client stage. Restoration requires
+the corresponding stage and no newer active task for the same step. Closed clients
+cannot resume archived open work. Archiving a recurring progress update skips that
+occurrence; a future scheduled occurrence can still appear, without immediately
+recreating the deleted task. A completed task restores as completed. Original
+overdue deadlines remain overdue after restoration and can then be edited.
+
+Edit/delete/restore requests include the task snapshot version. A concurrent task
+change rejects the stale action instead of overwriting the newer work, including
+during database save retries. Successful changes record the actor/time, retain
+comments and activity, and notify other task participants. No schema migration or
+external-service configuration is required.
 
 Profile controls open settings, the inbox, personal work, appearance and sign-out.
 Every teammate can change their own password in Settings using their current

@@ -21,6 +21,11 @@ export type Task = {
   createdBy?: string;
   campaignTaskId?: string;
   completedAt?: string;
+  archivedAt?: string;
+  archivedBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  revision?: number;
   assignee: string;
   status: "open" | "review" | "done";
   createdAt: string;
@@ -90,6 +95,13 @@ export const checklist = [
 ];
 export const isOwner = (m: Member) =>
   m.role === "approver" || m.role === "manager";
+export const canManageTask = (t: Task, m: Member) => isOwner(m) || t.createdBy === m.id;
+export const canAssignTask = (t: Task, m: Member) => t.kind === "custom" ||
+  (t.kind === "update" ? isOwner(m) : m.role === (t.kind === "edit" ? "editor" : "campaign"));
+// Only task changes invalidate an open edit form; new comments do not.
+export const taskVersion = (t: Task) => JSON.stringify([t.id, t.clientId, t.kind,
+  t.title, t.notes || "", t.assignee, t.dueAt, t.status, t.createdAt, t.createdBy || "",
+  t.completedAt || "", t.cycle, t.archivedAt || "", t.revision || 0]);
 const iso = (n: number) => new Date(n).toISOString();
 const hours = (n: number) => n * 3600000;
 const assert = (v: unknown, message: string) => {
@@ -150,7 +162,7 @@ function notice(
 function owners(s: State) {
   return s.members.filter(isOwner);
 }
-function assign(s: State, c: Client, kind: Task["kind"], now: number) {
+function assign(s: State, c: Client, kind: Task["kind"], now: number, createdBy = c.owner) {
   const role = kind === "edit" ? "editor" : "campaign";
   const assignee =
     kind === "update" ? c.owner : s.members.find((m) => m.role === role)?.id;
@@ -165,6 +177,7 @@ function assign(s: State, c: Client, kind: Task["kind"], now: number) {
           ? "Set up ad campaign"
           : "Send client progress update",
     kind,
+    createdBy,
     assignee: assignee!,
     status: "open",
     createdAt: iso(now),
@@ -172,12 +185,12 @@ function assign(s: State, c: Client, kind: Task["kind"], now: number) {
     cycle: 0,
   };
   s.tasks.push(t);
-  notice(s, t.assignee, c.id, `${c.name}: ${t.title}`, now);
+  notice(s, t.assignee, c.id, `${c.name}: ${t.title}`, now, undefined, t.id);
   return t;
 }
 export function tick(s: State, now = Date.now()) {
   for (const t of s.tasks) {
-    if (t.status !== "open" || !t.dueAt) continue;
+    if (t.archivedAt || t.status !== "open" || !t.dueAt) continue;
     const due = Date.parse(t.dueAt),
       created = Date.parse(t.createdAt);
     const phase =
@@ -222,7 +235,7 @@ export function tick(s: State, now = Date.now()) {
       now >= Date.parse(c.nextUpdate) &&
       !s.tasks.some(
         (t) =>
-          t.clientId === c.id && t.kind === "update" && t.status !== "done",
+          t.clientId === c.id && t.kind === "update" && t.status !== "done" && !t.archivedAt,
       )
     ) {
       assign(s, c, "update", now);
@@ -236,6 +249,7 @@ export type Action = {
   message?: MessageInput;
   clientId?: string;
   taskId?: string;
+  taskVersion?: string;
   value?: string;
   key?: string;
   files?: { path: string; name: string }[];
@@ -270,6 +284,61 @@ export function transition(
     return s;
   }
   if (a.type === "refresh") return s;
+  if (["editTask", "archiveTask", "restoreTask"].includes(a.type)) {
+    const task = s.tasks.find(t => t.id === a.taskId);
+    assert(task, "Task not found");
+    const t = task!;
+    assert(canManageTask(t, m), "Only the task assigner or owners may edit, delete or restore this task");
+    assert(a.taskVersion === taskVersion(t), "This task changed while you were working. Reopen it to review the latest details and try again.");
+    const client = s.clients.find(c => c.id === t.clientId);
+    const previousAssignee = t.assignee;
+    if (a.type === "restoreTask") {
+      assert(t.archivedAt, "Task is not archived");
+      assert(!t.clientId || client, "The task's client is no longer available");
+      if (t.status !== "done" && client) {
+        assert(client.stage !== "Closed", "This client's work is closed; the task remains in Archive");
+        if (t.kind !== "custom") {
+          const stage = t.kind === "edit" ? (t.status === "review" ? "In review" : "Editing") : t.kind === "campaign" ? "Campaign setup" : "Active";
+          assert(client.stage === stage, "The client has moved on. This workflow task must stay in Archive");
+          assert(!s.tasks.some(other => other.id !== t.id && other.clientId === t.clientId && other.kind === t.kind && !other.archivedAt && other.status !== "done"), "Another task is already active for this step. Archive it before restoring this one");
+          assert(s.members.some(member => member.id === t.assignee && canAssignTask(t, member)), "The assignee's role has changed; update their team role before restoring this workflow task");
+        }
+      }
+      delete t.archivedAt; delete t.archivedBy;
+      t.cycle++;
+    } else {
+      assert(!t.archivedAt, "Restore this task from Archive before changing it");
+      if (a.type === "archiveTask") {
+        t.archivedAt = iso(now); t.archivedBy = m.id;
+        // Stop old task alerts and pending deliveries, retaining their history.
+        const notices = new Set(s.notifications.filter(n => n.taskId === t.id).map(n => { n.read = true; return n.id; }));
+        if (s.pushQueue) s.pushQueue = s.pushQueue.filter(q => !notices.has(q.noticeId));
+        // Skip this occurrence instead of instantly recreating a deleted recurring task.
+        if (client?.stage === "Active" && t.kind === "update" && t.status !== "done" && (!client.nextUpdate || Date.parse(client.nextUpdate) <= now)) client.nextUpdate = iso(now + hours(84));
+      } else {
+        const data = a.task;
+        assert(data && typeof data.title === "string" && data.title.trim() && data.title.trim().length <= 160, "Enter a task title (up to 160 characters)");
+        assert(typeof data?.notes === "string" && data.notes.length <= 4000, "Task notes must be at most 4000 characters");
+        assert(s.members.some(member => member.id === data?.assignee && (data.assignee === t.assignee || canAssignTask(t, member))), "Choose a team member with the matching role");
+        const deadline = data?.dueAt;
+        assert(deadline === null || typeof deadline === "string" && Number.isFinite(Date.parse(deadline)), "Choose a valid deadline or leave it empty");
+        const dueAt = deadline ? iso(Date.parse(deadline)) : null;
+        assert(dueAt === t.dueAt || dueAt === null || Date.parse(dueAt) > now, "Choose a future deadline or keep the existing one");
+        assert(t.status !== "done" || data!.assignee === t.assignee, "Completed tasks keep their assignee");
+        assert(t.status === "open" || dueAt === t.dueAt, "Completed tasks and tasks awaiting approval keep their deadline");
+        if (t.dueAt !== dueAt || t.assignee !== data!.assignee) t.cycle++;
+        t.title = data!.title.trim(); t.notes = data!.notes!.trim();
+        t.assignee = data!.assignee; t.dueAt = dueAt;
+      }
+    }
+    t.updatedAt = iso(now); t.updatedBy = m.id; t.revision = (t.revision || 0) + 1;
+    const verb = a.type === "editTask" ? "updated" : a.type === "archiveTask" ? "archived" : "restored";
+    for (const id of new Set([t.createdBy, t.assignee, previousAssignee])) {
+      if (id && id !== m.id) notice(s, id, t.clientId, `${m.name} ${verb}: ${t.title}`, now, undefined, t.id);
+    }
+    s.events.push({ id: crypto.randomUUID(), clientId: t.clientId, text: `${m.name} ${verb} task: ${t.title}`, at: iso(now) });
+    return s;
+  }
   if (["createTask", "reassignTask", "completeTask", "reopenTask"].includes(a.type)) {
     let task = s.tasks.find(t => t.id === a.taskId);
     if (a.type === "createTask") {
@@ -288,7 +357,9 @@ export function transition(
     } else {
       assert(task?.kind === "custom", "Task not found");
       assert(isOwner(m) || task!.assignee === m.id || task!.createdBy === m.id, "Only task participants may manage this task");
+      assert(!task!.archivedAt, "Restore this task from Archive before changing it");
       if (a.type === "reassignTask") {
+        assert(canManageTask(task!, m), "Only the task assigner or owners may reassign this task");
         assert(task!.status === "open", "Reopen the task before reassigning it");
         assert(s.members.some(u => u.id === a.value), "Choose a team member");
         if (task!.assignee === a.value) return s;
@@ -336,6 +407,7 @@ export function transition(
   assert(c, "Client not found");
   const client = c!;
   const t = s.tasks.find((t) => t.id === a.taskId && t.clientId === client.id);
+  assert(!t?.archivedAt, "Restore this task from Archive before changing it");
   const own = () => assert(isOwner(m), "Owners only");
   const assigned = () =>
     assert(
@@ -358,6 +430,7 @@ export function transition(
       );
       if (t!.assignee === a.value) return s;
       t!.assignee = a.value!;
+      t!.cycle++;
       notice(
         s,
         t!.assignee,
@@ -383,6 +456,7 @@ export function transition(
           (t) =>
             t.clientId === client.id &&
             t.kind === "update" &&
+            !t.archivedAt &&
             t.status !== "done",
         )
         .forEach((t) => {
@@ -422,7 +496,7 @@ export function transition(
       assert(a.files?.length, "Upload footage first");
       client.rawFiles = a.files!;
       client.stage = "Editing";
-      assign(s, client, "edit", now);
+      assign(s, client, "edit", now, m.id);
       break;
     case "submit":
       assigned();
@@ -478,7 +552,7 @@ export function transition(
       );
       t!.status = "done";
       client.stage = "Campaign setup";
-      assign(s, client, "campaign", now);
+      assign(s, client, "campaign", now, m.id);
       break;
     case "campaign":
       assigned();
@@ -550,7 +624,7 @@ export function transition(
       );
       client.stage = "Closed";
       s.tasks
-        .filter((t) => t.clientId === client.id)
+        .filter((t) => t.clientId === client.id && !t.archivedAt)
         .forEach((t) => {
           t.status = "done";
           t.dueAt = null;
