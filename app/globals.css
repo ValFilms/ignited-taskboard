@@ -1793,7 +1793,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .welcome-dialog *, .welcome-dialog *::before, .welcome-dialog *::after { animation: none !important; transition: none !important; }
 }
 
-.practice-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); overflow: auto; overscroll-behavior: contain; }
+.practice-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); overflow: auto; overscroll-behavior: contain; scroll-padding: var(--tour-clearance, 230px) 0 90px; }
 .practice-workspace { --guide-height: 220px; padding-top: var(--guide-height); }
 .practice-workspace > [data-guide-home] { position: fixed; inset: 0 0 auto; z-index: 100; }
 .practice-workspace .sidebar { top: var(--guide-height); height: calc(100dvh - var(--guide-height)); }
@@ -1813,11 +1813,11 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .practice-workspace [data-guide-host]:not(:empty) { position: sticky; top: 0; z-index: 4; }
 .practice-workspace .task-dialog .drawer-top, .practice-workspace .drawer > .drawer-top { top: var(--guide-height); }
 .practice-workspace .task-dialog, .practice-workspace .drawer { scroll-padding-top: calc(var(--guide-height) + 60px); max-width: none; }
-.practice-workspace .topbar { position: sticky; top: 0; }
+.practice-workspace .topbar { position: relative; top: auto; }
 .practice-workspace .content { scroll-padding-top: var(--guide-height); }
 @media (max-width: 760px) {
   .practice-workspace .sidebar { top: auto; height: auto; }
-  .practice-workspace .topbar { top: var(--guide-height); }
+  .practice-workspace .topbar { top: auto; }
   .guided-coach { padding: 8px 12px 10px; }
   .guided-coach h2 { font-size: 1rem; }
   .guided-coach p { font-size: .85rem; margin-bottom: 8px; line-height: 1.45; }

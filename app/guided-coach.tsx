@@ -26,7 +26,7 @@ export default function GuidedCoach({steps,index,snapshot,onStep,onFinish,onExit
       const destination=root.querySelector<HTMLElement>('dialog[open] [data-guide-host], .drawer [data-guide-host]')||root.querySelector<HTMLElement>('[data-guide-home]');
       setHost(old=>old===destination?old:destination);
       const target=Array.from(root.querySelectorAll<HTMLElement>(step.target)).find(el=>!!el.getClientRects().length)||null;
-      if(target!==marked){marked?.classList.remove('tour-highlight');marked=target;marked?.classList.add('tour-highlight');}
+      if(target!==marked){marked?.classList.remove('tour-highlight');marked=target;marked?.classList.add('tour-highlight');if(target)requestAnimationFrame(()=>{if(target.isConnected)target.scrollIntoView({block:'center',behavior:'instant'});});}
       setFound(!!target);
     };
     update();
@@ -38,7 +38,7 @@ export default function GuidedCoach({steps,index,snapshot,onStep,onFinish,onExit
   useEffect(()=>{
     if(!host||!coach.current)return;
     const root=document.querySelector<HTMLElement>('[data-practice-workspace]')!;
-    const size=()=>root.style.setProperty('--guide-height',`${coach.current!.getBoundingClientRect().height}px`);
+    const size=()=>{const height=coach.current!.getBoundingClientRect().height;root.style.setProperty('--guide-height',`${height}px`);root.parentElement?.style.setProperty('--tour-clearance',`${height+12}px`);};
     size();const observer=new ResizeObserver(size);observer.observe(coach.current);
     return()=>observer.disconnect();
   },[host,index,completed,found]);
