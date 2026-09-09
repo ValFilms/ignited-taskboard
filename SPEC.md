@@ -18,6 +18,17 @@ The primary owner is the only ad approver. Yaniv is a manager with full board, c
 8. Actual launch starts a 14-day timer. Both owners receive an in-app trial review reminder three days before the end. They record continue at $530/month or close; no billing integration is implied.
 9. Continued clients receive owner-assigned progress-update tasks every 84 hours (3½ days), with first task after 60 hours and a 24-hour completion deadline. One outstanding task per client prevents backlog duplication. Owners should still maintain at least two updates weekly; late completion does not count as meeting that service target.
 
+## Client progress board
+
+The Active stage displays one summary card with the number of matching clients,
+including a zero state. It opens a separate, alphabetically ordered active-client
+list with name/location search and owner filtering. Board filters carry into this
+list, which shows the matching and total active counts and offers Clear filters.
+Each client opens the existing detail drawer; closing it preserves the list and
+filters. Back to board restores the kanban. Stage changes automatically update
+group membership and counts. This is presentation only: individual client records,
+tasks, reminders and visibility rules remain the source of truth.
+
 ## Ownership and reminders
 
 All configured teammates may create custom tasks for any teammate, including

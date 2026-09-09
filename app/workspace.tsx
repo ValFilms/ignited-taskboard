@@ -102,6 +102,10 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const [taskFilter, setTaskFilter] = useState("mine");
   const [archiveQuery, setArchiveQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
+  const [activeClientsOpen, setActiveClientsOpen] = useState(false);
+  const activeGroupRef = useRef<HTMLButtonElement>(null);
+  const activeListHeadingRef = useRef<HTMLHeadingElement>(null);
+  const returnToActiveGroup = useRef(false);
   const changes = useRef(0);
   const currentUser = useRef("");
   const [all, setAll] = useState<State | null>(null),
@@ -120,6 +124,16 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
     [memberId, setMemberId] = useState(""),
     [memberName, setMemberName] = useState(""),
     [memberRole, setMemberRole] = useState<Member["role"]>("editor");
+  useEffect(() => { setActiveClientsOpen(false); }, [view, userId]);
+  useEffect(() => {
+    if (activeClientsOpen) {
+      activeListHeadingRef.current?.focus();
+      activeListHeadingRef.current?.scrollIntoView({ block: "start" });
+    } else if (returnToActiveGroup.current) {
+      activeGroupRef.current?.focus();
+      returnToActiveGroup.current = false;
+    }
+  }, [activeClientsOpen]);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("inbox") === "1") setView("notifications");
     if (!auth) {
@@ -473,6 +487,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       (stageFilter === "all" || c.stage === stageFilter || stageFilter === "production" && ["Filming", "Editing", "In review", "Campaign setup"].includes(c.stage)) &&
       `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
   );
+  const activeClients = clients.filter(c => c.stage === "Active").sort((a, b) => a.name.localeCompare(b.name));
+  const totalActiveClients = s.clients.filter(c => c.stage === "Active").length;
   const current = s.clients.find((c) => c.id === selected);
   const reviewLink = parseDriveLink(current?.driveUrl);
   const approvals = s.clients.filter((c) => c.stage === "In review" && s.tasks.some(t => t.clientId === c.id && t.status === "review" && !t.archivedAt));
@@ -516,6 +532,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       aria-current={view === v ? "page" : undefined}
       onClick={() => {
         setView(v);
+        setActiveClientsOpen(false);
         setSelected(null);
         setError("");
       }}
@@ -525,6 +542,59 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       {!!count && <b>{count}</b>}
     </button>
   );
+  const clientCard = (c: Client, index: number) => {
+    const task = openTasks.find(t => t.clientId === c.id);
+    return (
+      <button
+        className="client-card"
+        key={c.id}
+        data-tour-client={c.id}
+        onClick={() => {
+          setSelected(c.id);
+          setValue("");
+        }}
+      >
+        <div className="card-top">
+          <span
+            className={`client-mark mark-${index % 4}`}
+          >
+            {initials(c.name)}
+          </span>
+          <ArrowUpRight size={16} />
+        </div>
+        <h3>{c.name}</h3>
+        <p>{c.location}</p>
+        <span
+          className={`card-status ${c.stage === "In review" ? "review" : ""}`}
+        >
+          {c.stage === "Trial"
+            ? `Trial ends ${new Date(c.trialEnd!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+            : c.stage === "Onboarding"
+              ? `${Object.values(c.onboarding).filter(Boolean).length} / 4 complete`
+              : due(task)}
+        </span>
+        <div className="card-footer">
+          <span>
+            <span className="avatar tiny">
+              {initials(
+                s.members.find((m) => m.id === c.owner)
+                  ?.name || "Owner",
+              )}
+            </span>
+            {
+              s.members.find((m) => m.id === c.owner)
+                ?.name
+            }
+          </span>
+          {task ? (
+            <Clock3 size={15} />
+          ) : (
+            <ChevronRight size={15} />
+          )}
+        </div>
+      </button>
+    );
+  };
   const taskCard = (t: Task) => (
     <button
       key={t.id}
@@ -738,7 +808,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               </button>
             </div>
           )}
-          {view === "board" && owner && (
+          {view === "board" && owner && !activeClientsOpen && (
             <>
               <div className="stats">
                 <button className="stat-card" onClick={() => { setStageFilter("production"); document.getElementById("delivery-board")?.scrollIntoView({ behavior: "smooth" }); }}>
@@ -842,64 +912,24 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                         </span>
                       </div>
                       <div className="column-cards">
-                        {clients
-                          .filter((c) => c.stage === stage)
-                          .map((c) => {
-                            const task = openTasks.find(
-                              (t) => t.clientId === c.id,
-                            );
-                            return (
-                              <button
-                                className="client-card"
-                                key={c.id}
-                                data-tour-client={c.id}
-                                onClick={() => {
-                                  setSelected(c.id);
-                                  setValue("");
-                                }}
-                              >
-                                <div className="card-top">
-                                  <span
-                                    className={`client-mark mark-${index % 4}`}
-                                  >
-                                    {initials(c.name)}
-                                  </span>
-                                  <ArrowUpRight size={16} />
-                                </div>
-                                <h3>{c.name}</h3>
-                                <p>{c.location}</p>
-                                <span
-                                  className={`card-status ${c.stage === "In review" ? "review" : ""}`}
-                                >
-                                  {c.stage === "Trial"
-                                    ? `Trial ends ${new Date(c.trialEnd!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-                                    : c.stage === "Onboarding"
-                                      ? `${Object.values(c.onboarding).filter(Boolean).length} / 4 complete`
-                                      : due(task)}
-                                </span>
-                                <div className="card-footer">
-                                  <span>
-                                    <span className="avatar tiny">
-                                      {initials(
-                                        s.members.find((m) => m.id === c.owner)
-                                          ?.name || "Owner",
-                                      )}
-                                    </span>
-                                    {
-                                      s.members.find((m) => m.id === c.owner)
-                                        ?.name
-                                    }
-                                  </span>
-                                  {task ? (
-                                    <Clock3 size={15} />
-                                  ) : (
-                                    <ChevronRight size={15} />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        {!clients.some((c) => c.stage === stage) && (
+                        {stage === "Active" ? (
+                          <button
+                            ref={activeGroupRef}
+                            className="client-card active-client-group"
+                            aria-label={`View active clients (${activeClients.length})`}
+                            onClick={() => { setError(""); setActiveClientsOpen(true); }}
+                          >
+                            <div className="card-top">
+                              <span className="client-mark"><Users size={20} /></span>
+                              <ArrowUpRight size={16} />
+                            </div>
+                            <h3>Active clients</h3>
+                            <strong className="active-client-count">{activeClients.length}</strong>
+                            <p>{query || ownerFilter !== "all" ? "clients match your filters" : "ongoing clients, together in one place"}</p>
+                            <div className="card-footer"><span>View clients</span><ChevronRight size={16} /></div>
+                          </button>
+                        ) : clients.filter(c => c.stage === stage).map(c => clientCard(c, index))}
+                        {stage !== "Active" && !clients.some((c) => c.stage === stage) && (
                           <p className="empty-column">Nothing here yet</p>
                         )}
                       </div>
@@ -911,6 +941,41 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                 the next step.
               </p>
             </>
+          )}
+          {view === "board" && owner && activeClientsOpen && (
+            <section className="active-clients-view" aria-labelledby="active-clients-title">
+              <button className="secondary" onClick={() => {
+                returnToActiveGroup.current = true;
+                setActiveClientsOpen(false);
+              }}><ArrowLeft size={18} />Back to board</button>
+              <div className="active-clients-heading">
+                <div>
+                  <h2 id="active-clients-title" ref={activeListHeadingRef} tabIndex={-1}>Active clients</h2>
+                  <p className="muted">Open a client to see their details, tasks and progress updates.</p>
+                </div>
+                <span className="badge" role="status">{activeClients.length} of {totalActiveClients} clients</span>
+              </div>
+              <div className="filters active-client-filters">
+                <label className="search">
+                  <Search size={16} />
+                  <input aria-label="Search active clients" placeholder="Search name or location" value={query} onChange={e => setQuery(e.target.value)} />
+                </label>
+                <select aria-label="Filter active clients by owner" value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}>
+                  <option value="all">All owners</option>
+                  {s.members.filter(isOwner).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+                {(query || ownerFilter !== "all") && <button className="secondary" onClick={() => { setQuery(""); setOwnerFilter("all"); }}>Clear filters</button>}
+              </div>
+              {activeClients.length ? (
+                <div className="active-client-list">{activeClients.map(c => clientCard(c, stages.indexOf("Active")))}</div>
+              ) : (
+                <div className="panel active-clients-empty">
+                  <Users size={28} />
+                  <h3>{totalActiveClients ? "No matching active clients" : "No active clients yet"}</h3>
+                  <p>{totalActiveClients ? "Try another name, location or owner." : "Clients appear here automatically when they move to Active."}</p>
+                </div>
+              )}
+            </section>
           )}
           {view === "work" && (
             <div className="panel">

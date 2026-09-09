@@ -1849,3 +1849,26 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .archive-note { padding: 12px; }
   .task-management > button { min-width: 120px; }
 }
+
+/* Active clients stay grouped on the board, with a separate searchable list. */
+.active-client-group .client-mark { color: var(--accent); }
+.active-client-count { display: block; font-size: 2rem; line-height: 1.2; margin: 8px 0; }
+.active-client-group p { line-height: 1.5; }
+.active-clients-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 24px 0 20px; }
+.active-clients-heading h2 { margin-bottom: 8px; scroll-margin-top: 90px; }
+.active-clients-heading p { margin: 0; line-height: 1.5; }
+.active-clients-heading .badge { flex-shrink: 0; }
+.active-client-filters { margin-bottom: 20px; }
+.active-client-filters .search { margin: 0; flex: 1; max-width: 440px; }
+.active-client-filters .search input { width: 100%; min-width: 0; }
+.active-client-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.active-client-list .client-card { margin: 0; min-width: 0; }
+.active-client-list h3, .active-client-list p { overflow-wrap: anywhere; }
+.active-clients-empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.active-clients-empty h3 { color: var(--ink); margin: 16px 0 8px; }
+.active-clients-empty p { margin: 0; line-height: 1.5; }
+@media (max-width: 760px) {
+  .active-clients-heading { flex-wrap: wrap; }
+  .active-client-filters .search { max-width: none; }
+  .active-client-list { grid-template-columns: minmax(0, 1fr); }
+}

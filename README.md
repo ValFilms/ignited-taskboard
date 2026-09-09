@@ -124,3 +124,12 @@ details and comments. Archived tasks stop reminders and leave active task lists;
 their comments stay readable. Workflow restoration checks the current client step
 to avoid duplicate work. If someone changes a task while its edit form is open,
 the app asks you to review the newer details before saving.
+
+## Browse active clients
+
+The **Active** column in Client progress shows one **Active clients** card with a
+client count. Open it to browse the active clients, search by name or location,
+and filter by owner. Select a client for their usual details and tasks; closing
+those details returns to the list. **Back to board** returns to the kanban.
+Board search and owner filters carry into the list and can be cleared there.
+Clients enter and leave the group automatically when their stage changes.
