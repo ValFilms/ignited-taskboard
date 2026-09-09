@@ -2,7 +2,7 @@ import { State, Client, checklist, Stage } from "./workflow";
 export function demoState(): State {
   const now = Date.now();
   const members = [
-    { id: "owner", name: "You", role: "approver" as const },
+    { id: "owner", name: "Val", role: "approver" as const },
     { id: "yaniv", name: "Yaniv", role: "manager" as const },
     { id: "john", name: "John", role: "editor" as const },
     { id: "carl", name: "Karl", role: "campaign" as const },

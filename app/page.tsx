@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
   Bell,
+  MessageCircle,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -41,6 +42,7 @@ import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
 import TeamTask from "./team-task";
+import TeamChat, { TaskDiscussion } from "./team-chat";
 import PushSettings from "./push-settings";
 import PasswordSettings from "./password-settings";
 import { parseDriveLink } from "../lib/drive-link";
@@ -54,7 +56,7 @@ const auth = configured
     )
   : null;
 type View =
-  "board" | "work" | "approvals" | "notifications" | "settings" | "sales";
+  "board" | "work" | "approvals" | "notifications" | "settings" | "sales" | "chat";
 function date(value?: string | null) {
   return value
     ? new Date(value).toLocaleString(undefined, {
@@ -85,6 +87,8 @@ function initials(name: string) {
     .join("");
 }
 export default function Page() {
+  const [chatThread, setChatThread] = useState("");
+  const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
   const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string } | null>(null);
   const [taskFilter, setTaskFilter] = useState("mine");
   const [stageFilter, setStageFilter] = useState("all");
@@ -149,14 +153,15 @@ export default function Page() {
       } finally { loading = false; }
     };
     void load();
-    const timer = setInterval(load, 15000);
+    const timer = setInterval(load, view === "chat" || taskDialog || commentTaskId || selected ? 5000 : 15000);
     document.addEventListener("visibilitychange", load);
     return () => {
       active = false;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", load);
     };
-  }, [token]);
+  }, [token, view, taskDialog, commentTaskId, selected]);
+  useEffect(() => { setChatThread(""); setCommentTaskId(null); }, [userId]);
   const me = all?.members.find((x) => x.id === userId);
   const s = all && me ? visibleState(all, me) : null;
   const owner = me ? isOwner(me) : false;
@@ -440,7 +445,9 @@ export default function Page() {
     taskFilter === "sent" && t.createdBy === me.id || taskFilter === "mine" && t.assignee === me.id));
   const openNotice = (n: State["notifications"][number]) => {
     const task = s.tasks.find(t => t.id === n.taskId);
-    if (task?.kind === "custom") setTaskDialog({ id: task.id });
+    if (n.messageId && task) setCommentTaskId(task.id);
+    else if (n.messageId && n.threadId) { setSelected(null); setChatThread(n.threadId); setView("chat"); }
+    else if (task?.kind === "custom") setTaskDialog({ id: task.id });
     else if (n.clientId) setSelected(n.clientId);
     else setView("work");
     void act({ type: "read", key: n.id });
@@ -450,6 +457,7 @@ export default function Page() {
     work: "My work",
     approvals: "Ad approvals",
     notifications: "Inbox",
+    chat: "Team chat",
     settings: "Workspace settings",
     sales: "Sales pipeline",
   }[view];
@@ -558,6 +566,7 @@ export default function Page() {
             {nav("sales", "Sales", <Users size={19} />)}
           </>
         )}
+        {nav("chat", "Chat", <MessageCircle size={19} />, s.notifications.filter(n => n.messageId && !n.taskId && !n.read).length)}
         {nav("settings", "Settings", <Settings size={19} />)}
         <div className="sidebar-bottom">
           <div className="status-dot" />{" "}
@@ -635,7 +644,7 @@ export default function Page() {
             </label>
           </div>
         )}
-        <main className="content">
+        <main className={`content ${view === "chat" ? "messenger-content" : ""}`}>
           <div className="page-heading">
             <div>
               <p className="eyebrow">IGNITED CONTENT CO.</p>
@@ -652,6 +661,8 @@ export default function Page() {
                       ? "Review the edit. Keep production moving."
                       : view === "notifications"
                         ? "The updates that need your attention."
+                        : view === "chat"
+                          ? "Conversations that keep the team moving."
                         : view === "sales"
                           ? "Acquisition stays separate from client delivery."
                           : "People, access and workspace connections."}
@@ -882,6 +893,7 @@ export default function Page() {
               )}
             </div>
           )}
+          {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} selected={chatThread} onSelect={setChatThread} />}
           {view === "notifications" && (
             <div className="panel">
               <div className="panel-heading">
@@ -1461,6 +1473,11 @@ export default function Page() {
                 </section>
               )}
               <section className="detail-section">
+                <h3>Task comments</h3>
+                <p className="muted">Discuss any task, including completed work.</p>
+                <div className="task-discussion-links">{s.tasks.filter(t => t.clientId === current.id).map(t => <button key={t.id} className="secondary" onClick={() => setCommentTaskId(t.id)}>{t.title}{t.status === "done" ? " · Completed" : ""} · {(s.messages || []).filter(m => m.target.kind === "task" && m.target.taskId === t.id).length} comments</button>)}</div>
+              </section>
+              <section className="detail-section">
                 <h3>Business context</h3>
                 <p>{current.offer || "No offer recorded yet."}</p>
                 {owner && (
@@ -1536,6 +1553,7 @@ export default function Page() {
         </div>
       )}
       {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} />}
+      {commentTaskId && <TaskDiscussion key={`${userId}:${commentTaskId}`} state={s} me={me} taskId={commentTaskId} act={act} error={error} onClose={() => setCommentTaskId(null)} />}
       <NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />
     </div>
   );

@@ -1,3 +1,4 @@
+import { canReadMessage, sendMessage, type Message, type MessageInput } from "./messaging";
 import type { Device, Delivery } from "./push-state";
 import { parseDriveLink } from "./drive-link";
 export type Role = "approver" | "manager" | "editor" | "campaign";
@@ -57,8 +58,11 @@ export type Notice = {
   createdAt: string;
   read: boolean;
   taskId?: string;
+  messageId?: string;
+  threadId?: string;
 };
 export type State = {
+  messages?: Message[];
   pushDevices?: Device[];
   pushQueue?: Delivery[];
   members: Member[];
@@ -97,8 +101,11 @@ export function visibleState(s: State, m: Member): State {
     ? s.tasks
     : s.tasks.filter((t) => t.assignee === m.id || t.createdBy === m.id);
   const ids = new Set(tasks.map((t) => t.clientId));
+  const messages = s.messages?.filter(message => canReadMessage(s, m, message));
+  const messageIds = new Set(messages?.map(message => message.id));
   return {
     ...publicState,
+    ...(messages ? {messages} : {}),
     members: s.members.map(({ id, name, role }) => ({ id, name, role })),
     tasks,
     clients: s.clients
@@ -115,7 +122,7 @@ export function visibleState(s: State, m: Member): State {
               paymentConfirmed: false,
             },
       ),
-    notifications: s.notifications.filter((n) => n.userId === m.id && (isOwner(m) || ids.has(n.clientId) || tasks.some(t => t.id === n.taskId))),
+    notifications: s.notifications.filter((n) => n.userId === m.id && (n.messageId ? messageIds.has(n.messageId) : (isOwner(m) || ids.has(n.clientId) || tasks.some(t => t.id === n.taskId)))),
     events: isOwner(m) ? s.events : [],
   };
 }
@@ -226,6 +233,7 @@ export function tick(s: State, now = Date.now()) {
 }
 export type Action = {
   type: string;
+  message?: MessageInput;
   clientId?: string;
   taskId?: string;
   value?: string;
@@ -246,6 +254,15 @@ export function transition(
     s.members.some((u) => u.id === m.id && u.role === m.role),
     "Unauthorized",
   );
+  if (a.type === "sendMessage") { sendMessage(s, m, a.message, now); return s; }
+  if (a.type === "readConversation") {
+    const messages = s.messages || [];
+    const end = messages.findIndex(message => message.id === a.value && message.threadId === a.key && canReadMessage(s, m, message));
+    if (end < 0) throw new Error("Conversation is no longer available");
+    const ids = new Set(messages.slice(0, end + 1).filter(message => message.threadId === a.key && canReadMessage(s, m, message)).map(message => message.id));
+    s.notifications.filter(n => n.userId === m.id && n.messageId && ids.has(n.messageId)).forEach(n => { n.read = true; });
+    return s;
+  }
   if (a.type === "read") {
     s.notifications
       .filter((n) => n.userId === m.id && (!a.key || n.id === a.key))

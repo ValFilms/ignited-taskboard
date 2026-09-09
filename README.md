@@ -80,3 +80,9 @@ Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-job
 - John submits the Google Drive folder containing the edits. Reviewers open that folder from the task, then approve or request revisions in Ignited. Individual file links remain supported. Google Drive permissions are separate; John must share the folder/files with the reviewers. The app does not change sharing permissions or automatically sync folder contents.
 - For first activation, verify SQL, storage, login, form trigger, reminders and roles with test records before using real clients. No team invitations have been sent.
 - No live Supabase, Google Form, scheduler, email or push credentials are supplied in this repository.
+
+## Team messenger
+
+Open Chat for the shared team conversation or select a teammate for private text messages. On phones, a conversation opens full-screen; use the back arrow to return to the list. Task details and client drawers include task comments with @mentions, including completed work. Inbox links open the relevant conversation. Messages use the existing authenticated workspace API and configured push sender, so no additional server or migration is needed.
+
+Chat updates every five seconds while visible. Demo messages stay in that browser session and never notify real teammates. The first messaging version supports text only; see SPEC.md for access rules and limits.

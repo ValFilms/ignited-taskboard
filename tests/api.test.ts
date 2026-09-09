@@ -65,6 +65,23 @@ test('API regression with isolated Supabase transport', async t => {
     await t.test('compare-and-swap exhaustion reports failure',async()=>{
       reset(); conflicts=5; assert.equal((await workspace.POST(req({type:'profile',clientId:'demo-1',profile:{phone:'123'}}))).status,400); assert.equal(writes,5); assert.equal(state.clients[1].phone,'');
     });
+    await t.test('message API derives identity, retries CAS and keeps private data out of other responses',async()=>{
+      reset(); conflicts=2;
+      const action={type:'sendMessage',message:{id:crypto.randomUUID(),body:'Private API test',target:{kind:'direct',memberId:'carl'},senderId:'owner',createdAt:'forged'}};
+      const r=await workspace.POST(req(action,'john'));assert.equal(r.status,200);
+      assert.equal(state.messages?.length,1);assert.equal(state.messages?.[0].senderId,'john');assert.notEqual(state.messages?.[0].createdAt,'forged');
+      assert.equal(state.clients[0].offer,'Concurrent change');
+      assert.equal((await workspace.POST(req(action,'john'))).status,200);assert.equal(state.messages?.length,1);
+      for(const id of ['owner','yaniv']) {
+        const visible=await (await workspace.GET(req(undefined,id))).json();assert.deepEqual(visible.messages,[]);assert(!JSON.stringify(visible).includes('Private API test'));
+      }
+      const recipient=await (await workspace.GET(req(undefined,'carl'))).json();assert.equal(recipient.messages.length,1);assert.equal(recipient.notifications.filter((n:any)=>n.messageId).length,1);
+    });
+    await t.test('message API rejects unknown users and forbidden task threads without writing',async()=>{
+      reset();const action={type:'sendMessage',message:{id:crypto.randomUUID(),body:'Test',target:{kind:'task',taskId:'campaign-2'}}};
+      assert.equal((await workspace.POST(req(action,'john'))).status,403);
+      assert.equal((await workspace.POST(req(action,'outsider'))).status,403);assert.equal(writes,0);
+    });
     await t.test('unchanged polling avoids database writes',async()=>{
       reset();state.tasks=[];state.clients=[];assert.equal((await workspace.POST(req({type:'refresh'}))).status,200);assert.equal(writes,0);
     });
@@ -80,7 +97,7 @@ test('API regression with isolated Supabase transport', async t => {
         assert.equal((await route.POST(new Request('http://localhost/api',{method:'POST',headers:{Authorization:'Bearer owner'},body:'{broken'}))).status,400);
       } assert.equal(writes,0);
     });
-    for(const username of ['You',' YOU ','Yaniv','John','Karl','owner@example.test']) await t.test('username login '+username,async()=>{
+    for(const username of ['Val',' VAL ','Yaniv','John','Karl','owner@example.test']) await t.test('username login '+username,async()=>{
       reset(); state.members.forEach((m,i)=>m.id=`00000000-0000-4000-8000-00000000000${i}`); const r=await login.POST(req({username,password:'valid-password'})); assert.equal(r.status,200); assert.equal(r.headers.get('cache-control'),'no-store');
     });
     for(const body of [{username:'John',password:'wrong'},{username:'Nobody',password:'valid-password'},{username:'',password:'x'},{username:123,password:'x'},null,{username:'x'.repeat(2100),password:'x'}]) await t.test('invalid login '+JSON.stringify(body).slice(0,65),async()=>{

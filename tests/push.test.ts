@@ -80,6 +80,15 @@ test("Push API and sender regression use isolated transports", async t => {
       assert(!JSON.stringify(sends[0].payload).includes("Private client"));
       assert.equal(state.pushQueue!.length, 0); const visible = await response.json(); assert(!visible.pushDevices); assert(!visible.pushQueue);
     });
+    await t.test("Private messages push only to the recipient without message text and retries do not resend", async () => {
+      reset(); addDevice(state, "carl", subscription);
+      addDevice(state, "owner", {...subscription, endpoint: subscription.endpoint + "-owner"});
+      const action = {type: "sendMessage", message: {id: crypto.randomUUID(), body: "Private chat secret", target: {kind: "direct", memberId: "carl"}}};
+      assert.equal((await workspace.POST(req(action, "john"))).status, 200);
+      assert.equal(sends.length, 1); assert.equal(sends[0].endpoint, subscription.endpoint);
+      assert(!JSON.stringify(sends[0].payload).includes("Private chat secret"));
+      assert.equal((await workspace.POST(req(action, "john"))).status, 200); assert.equal(sends.length, 1);
+    });
     await t.test("Campaign completion persists the Closebot task and pushes its notification to Yaniv", async () => {
       reset(); state = demoState(); addDevice(state, "yaniv", subscription);
       const response = await workspace.POST(req({ type: "campaign", clientId: "demo-2", taskId: "campaign-2" }, "carl"));

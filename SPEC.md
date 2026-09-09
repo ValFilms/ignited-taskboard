@@ -42,6 +42,37 @@ Web Push device subscriptions and server delivery are described in [PUSH.md](doc
 
 New clients default to the primary owner. Assignment to Yaniv is manual and reversible. Automatic load balancing was not confirmed. Daily campaign reminders and ad-refresh reminders are omitted. Task notices are in-app; approaching reminders go to assignee and primary owner six hours before deadline, overdue reminders at/after due. Each reminder has a stable task/cycle/recipient key to prevent duplicates. A five-minute external scheduler is required for unattended delivery. Deadlines use UTC elapsed time and display in each viewer's local timezone.
 
+## Team messaging and task comments
+
+Every current teammate can use shared team chat or private one-to-one text
+conversations. The messenger has a searchable conversation list, message bubbles,
+unread counts, a bottom composer, and a full-screen conversation view on phones.
+Drafts survive switching conversations while the messenger remains open. Desktop
+Enter sends, Shift+Enter inserts a newline; phone keyboards retain newline entry.
+Messages are plain text, up to 4,000 characters. History is retained, with the
+latest 50 shown first and an option to reveal older messages.
+
+All task types, including completed tasks, support comments and @first-name
+mentions. Owners, the assignee and creator can access a task conversation;
+reassignment revokes a former assignee's access unless they are also its creator
+or an owner. Mentioning someone never grants access. Private conversations are
+returned only to their two participants, including when another viewer is an
+owner. Database administrators still have administrative storage access.
+
+Team messages notify other teammates, direct messages notify their recipient,
+and task comments notify other task participants. Mentions change the alert text
+without duplicating alerts. Existing Web Push sends generic notifications to
+enabled recipient devices; message text is never included in the push payload.
+Opening a visible conversation at its latest messages marks its own alerts read.
+Chat/task views poll every five seconds while visible; this is not typing presence
+or instantaneous streaming. No read receipts, attachments, voice calls, message
+editing/deletion, end-to-end encryption, or offline sending are included.
+
+Messages use an optional field in the existing private workspace record. No SQL
+migration or separate messaging service is required. API checks derive authors,
+times and recipients, and client message IDs make retries idempotent. The same
+single-record storage scale limits below apply to message history.
+
 ## Intake and external systems
 
 The Google Form is authoritative. GHL remains the separate sales system; Closebot booking remains external. No Stripe matching, roster import, automatic charging or client-specific checkout generation. Form response ID replays are ignored; matching email + business name with a different response ID requires manual duplicate review. Historical imports use historical=true and send no old assignment notices. Confirm actual Form/Sheet column names before wiring.

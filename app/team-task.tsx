@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Action, Member, State, Task } from "../lib/workflow";
 import { isOwner } from "../lib/workflow";
 import Dialog from "./dialog";
+import { Conversation } from "./team-chat";
 
 export default function TeamTask({ state, me, task, taskId, clientId = "", act, onClose, error }: {
   state: State; me: Member; task?: Task; taskId?: string; clientId?: string; act: (action: Action) => Promise<boolean>; onClose: () => void; error?: string;
@@ -32,6 +33,9 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
         onClick={() => void run({ type: task.status === "done" ? "reopenTask" : "completeTask", taskId: task.id })}>
         {busy ? "Saving…" : task.status === "done" ? "Reopen task" : "Mark complete"}
       </button>}
+      <h3>Task comments</h3>
+      <p className="muted">Visible to owners, the assignee, and the task creator.</p>
+      <Conversation key={`${me.id}:${task.id}`} state={state} me={me} target={{kind: "task", taskId: task.id}} act={act} error={error} />
     </> : <form onSubmit={e => {
       e.preventDefault(); const data = new FormData(e.currentTarget);
       const due = String(data.get("dueAt") || "");
