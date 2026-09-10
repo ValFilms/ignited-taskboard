@@ -5,6 +5,8 @@ import { transition, visibleState, tick, importClient } from "../lib/workflow";
 const now = Date.UTC(2026, 8, 7, 0);
 test("in-app refresh checks deadlines and reading a notification only changes the recipient's selected item", () => {
   const s = demoState();
+  // Pin the fixture to this test's clock, not the day the suite happens to run.
+  s.tasks.find(t => t.id === "edit-1")!.dueAt = new Date(now + 24 * 3600000).toISOString();
   const john = s.members[2];
   const state = tick(transition(s, john, { type: "refresh" }, now), now + 1000 * 3600 * 72);
   const mine = state.notifications.filter(n => n.userId === john.id);

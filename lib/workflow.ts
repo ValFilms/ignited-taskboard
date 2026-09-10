@@ -54,6 +54,7 @@ export type Client = {
   launchedAt?: string;
   trialEnd?: string;
   nextUpdate?: string;
+  pipelineRevision?: number;
 };
 export type Notice = {
   id: string;
@@ -103,6 +104,11 @@ export const canAssignTask = (t: Task, m: Member) => t.kind === "custom" ||
 export const taskVersion = (t: Task) => JSON.stringify([t.id, t.clientId, t.kind,
   t.title, t.notes || "", t.assignee, t.dueAt, t.status, t.createdAt, t.createdBy || "",
   t.completedAt || "", t.cycle, t.archivedAt || "", t.revision || 0]);
+export const pipelineVersion = (s: State, c: Client) => JSON.stringify([
+  c.stage, c.pipelineRevision || 0, c.owner, c.onboarding, c.rawFiles, c.driveUrl,
+  c.launchCall, c.paymentConfirmed, c.launchedAt, c.trialEnd, c.nextUpdate,
+  s.tasks.filter(t => t.clientId === c.id).map(taskVersion),
+]);
 const iso = (n: number) => new Date(n).toISOString();
 const hours = (n: number) => n * 3600000;
 const assert = (v: unknown, message: string) => {
@@ -228,7 +234,7 @@ export function tick(s: State, now = Date.now()) {
           c.id,
           `${c.name}: trial review / conversion due ${new Date(c.trialEnd).toLocaleDateString("en-US", { timeZone: "America/New_York" })}`,
           now,
-          `${c.id}:trial:${m.id}`,
+          `${c.id}:trial:${m.id}${c.pipelineRevision ? `:${c.pipelineRevision}` : ""}`,
         );
     if (
       c.stage === "Active" &&
@@ -251,6 +257,9 @@ export type Action = {
   clientId?: string;
   taskId?: string;
   taskVersion?: string;
+  pipelineVersion?: string;
+  reason?: string;
+  driveUrl?: string;
   value?: string;
   key?: string;
   files?: { path: string; name: string }[];
@@ -432,6 +441,65 @@ export function transition(
       "Only the assigned team member may submit this task",
     );
   switch (a.type) {
+    case "movePipeline": {
+      assert(m.role === "approver", "Only the ad approver may move the pipeline");
+      assert(a.pipelineVersion === pipelineVersion(s, client), "The pipeline changed. Close this form and reopen it to review the latest work.");
+      assert(stages.includes(a.value as Stage) && a.value !== client.stage, "Choose a different pipeline stage");
+      assert(typeof a.reason === "string" && a.reason.trim() && a.reason.length <= 2000, "Add a reason (up to 2000 characters)");
+      const target = a.value as Stage, previous = client.stage;
+      const link = parseDriveLink(a.driveUrl || client.driveUrl);
+      if (["In review", "Campaign setup"].includes(target)) assert(link, "Add the Google Drive folder or file containing the edited videos first");
+      if (target === "Filming") assert(checklist.every(k => client.onboarding[k]), "Complete onboarding before moving to Filming");
+      if (target === "Trial") assert(client.launchCall && client.paymentConfirmed, "Confirm launch call and external payment setup in Ready to launch first");
+      const affected = s.tasks.filter(task => task.clientId === client.id && !task.archivedAt && task.status !== "done" &&
+        (target === "Closed" || task.kind !== "custom" || !!task.campaignTaskId && stages.indexOf(target) < stages.indexOf("Ready to launch")));
+      // Superseded work remains recoverable, with its original comments and status.
+      for (const task of affected) {
+        task.archivedAt = iso(now); task.archivedBy = m.id;
+        task.updatedAt = iso(now); task.updatedBy = m.id; task.revision = (task.revision || 0) + 1;
+      }
+      // Old stage alerts must not be delivered after this correction. Chat alerts remain.
+      const obsolete = new Set(s.notifications.filter(n => n.clientId === client.id && !n.messageId &&
+        (!n.taskId || affected.some(task => task.id === n.taskId))).map(n => {n.read = true; return n.id;}));
+      if (s.pushQueue) s.pushQueue = s.pushQueue.filter(q => !obsolete.has(q.noticeId));
+      client.stage = target; client.pipelineRevision = (client.pipelineRevision || 0) + 1;
+      delete client.nextUpdate;
+      if (target !== "Trial") delete client.trialEnd;
+      if (stages.indexOf(target) < stages.indexOf("Ready to launch")) {
+        client.launchCall = false; client.paymentConfirmed = false;
+      }
+      let nextTask: Task | undefined;
+      if (target === "Editing" || target === "In review") {
+        nextTask = assign(s, client, "edit", now, m.id);
+        nextTask.notes = a.reason!.trim();
+        if (target === "In review") {nextTask.status = "review"; nextTask.dueAt = null;}
+      } else if (target === "Campaign setup") {
+        nextTask = assign(s, client, "campaign", now, m.id);
+        nextTask.notes = a.reason!.trim();
+      } else if (target === "Ready to launch") {
+        // A correction may skip the campaign task UI; retain its normal notified handoff.
+        const existing = s.tasks.some(task => task.clientId === client.id && task.campaignTaskId && !task.archivedAt);
+        if (!existing) {
+          const candidates = s.members.filter(u => u.name.trim().split(/\s+/)[0].toLowerCase() === "yaniv");
+          assert(candidates.length === 1, "Configure one team member named Yaniv before moving to Ready to launch.");
+          nextTask = {id: crypto.randomUUID(), clientId: client.id, kind: "custom", campaignTaskId: `pipeline:${client.id}:${client.pipelineRevision}`,
+            title: "Integrate Closebot with GHL and Facebook", createdBy: client.owner, assignee: candidates[0].id,
+            notes: "Connect Closebot to this client's GHL subaccount and Facebook account. Verify both connections and the lead flow, then mark this task complete.",
+            status: "open", createdAt: iso(now), dueAt: null, cycle: 0};
+          s.tasks.push(nextTask);
+          notice(s, nextTask.assignee, client.id, `${client.name}: ${nextTask.title}`, now, undefined, nextTask.id);
+        }
+      } else if (target === "Trial") {
+        client.launchedAt = iso(now); client.trialEnd = iso(now + hours(24 * 14));
+      } else if (target === "Active") client.nextUpdate = iso(now + hours(60));
+      if (["In review", "Campaign setup"].includes(target)) client.driveUrl = link!.url;
+      const text = `${m.name} moved ${client.name}: ${previous} → ${target}. ${a.reason!.trim()}`;
+      for (const id of new Set([...owners(s).map(u => u.id), ...affected.map(task => task.assignee)])) {
+        if (id !== m.id) notice(s, id, client.id, text, now, undefined, affected.find(task => task.assignee === id)?.id);
+      }
+      s.events.push({id: crypto.randomUUID(), clientId: client.id, text, at: iso(now)});
+      return s;
+    }
     case "reassign":
       own();
       assert(t && t.kind !== "custom" && t.status !== "done", "Choose an open workflow task");
@@ -511,7 +579,7 @@ export function transition(
       own();
       assert(client.stage === "Filming", "Client must be ready for filming");
       assert(a.files?.length, "Upload footage first");
-      client.rawFiles = a.files!;
+      client.rawFiles = [...new Map([...client.rawFiles, ...a.files!].map(file => [file.path, file])).values()];
       client.stage = "Editing";
       assign(s, client, "edit", now, m.id);
       break;

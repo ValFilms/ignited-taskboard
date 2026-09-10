@@ -148,6 +148,33 @@ their comments stay readable. Workflow restoration checks the current client ste
 to avoid duplicate work. If someone changes a task while its edit form is open,
 the app asks you to review the newer details before saving.
 
+## Move work forward or back
+
+Val (the ad approver) can open a client and use **Move pipeline → Move back,
+Move forward, or Choose stage**. Review the effects, add a reason/instructions,
+and confirm the destination. This is an explicit owner correction; moving to
+Campaign setup records approval of the linked edits, and moving to Ready to
+launch confirms campaign readiness. Editors and managers retain their normal
+workflow controls without this override.
+
+Unfinished workflow tasks move to Archive with their comments and original
+status preserved. New Editing/Campaign setup tasks get 24 hours; In review has
+no running deadline and requires a Drive link. Filming requires completed
+onboarding. Earlier stages clear launch confirmations and archive unfinished
+automatic Closebot tasks. Ready to launch creates Yaniv's notified integration
+task if one is not already saved outside Archive. Trial requires the existing
+launch checks and records a new launch time/14-day trial; Active schedules the
+first update in 60 hours. Closed archives all unfinished client tasks. Other
+manual tasks remain independent. Uploaded footage and Drive links are retained;
+new refilm uploads add to the footage history.
+
+Use **Mark complete / Reopen task** for custom team tasks. For workflow tasks,
+**Open client workflow → Move pipeline** starts fresh work at the chosen stage
+while preserving completed history. Changes are recorded in client activity and
+notified to affected teammates. Stale forms must be reopened. These controls do
+not move or stop ads in Facebook, change GHL, bill a client, or alter Drive files.
+No database migration or server configuration is required.
+
 ## Browse active clients
 
 The **Active** column in Client progress shows one **Active clients** card with a

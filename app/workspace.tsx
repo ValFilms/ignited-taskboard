@@ -44,6 +44,7 @@ import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
 import TeamTask from "./team-task";
+import PipelineControls from "./pipeline-controls";
 import TeamChat, { TaskDiscussion } from "./team-chat";
 import PushSettings from "./push-settings";
 import PasswordSettings from "./password-settings";
@@ -1294,6 +1295,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                   )}
                 </div>
               </div>
+              {me.role === "approver" && <PipelineControls key={current.id} state={s} client={current} act={act} />}
               {current.stage === "Onboarding" && owner && (
                 <section className="detail-section">
                   <h3>Finish onboarding</h3>
@@ -1527,7 +1529,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                   </section>
                 ))}
               {s.tasks.some(t => t.clientId === current.id && t.kind === "custom" && !t.archivedAt) && <section className="detail-section"><h3>Team tasks</h3>{s.tasks.filter(t => t.clientId === current.id && t.kind === "custom" && !t.archivedAt).map(taskCard)}</section>}
-              {s.tasks.some(t => t.clientId === current.id && t.archivedAt) && <section className="detail-section"><h3>Archived tasks</h3><p className="muted">Workflow tasks must be restored before their step can continue.</p>{s.tasks.filter(t => t.clientId === current.id && t.archivedAt).map(taskCard)}</section>}
+              {s.tasks.some(t => t.clientId === current.id && t.archivedAt) && <section className="detail-section"><h3>Archived tasks</h3><p className="muted">Archived work and comments stay saved. Restore only when it still matches the current stage and no replacement task is active.</p>{s.tasks.filter(t => t.clientId === current.id && t.archivedAt).map(taskCard)}</section>}
               {current.stage === "Ready to launch" && owner && (
                 <section className="detail-section">
                   <h3>Launch checklist</h3>

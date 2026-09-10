@@ -88,6 +88,7 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
             {busy ? "Saving…" : task.status === "done" ? "Reopen task" : "Mark complete"}
           </button>}
           {task.kind !== "custom" && onOpenClient && <button className="primary" disabled={busy} onClick={() => onOpenClient(task.clientId)}>Open client workflow</button>}
+          {task.kind !== "custom" && me.role === "approver" && <p className="muted">To move this video work forward or back, open the client workflow and use Move pipeline. Your completed task and comments stay in history.</p>}
         </>}
         <h3>Task comments</h3>
         <p className="muted">Visible to owners, the assignee, and the task creator.</p>

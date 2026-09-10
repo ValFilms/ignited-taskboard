@@ -1872,3 +1872,11 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .active-client-filters .search { max-width: none; }
   .active-client-list { grid-template-columns: minmax(0, 1fr); }
 }
+/* Stage correction controls also fit narrow phone drawers. */
+.pipeline-controls { min-width: 0; }
+.pipeline-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.pipeline-buttons button { white-space: normal; min-height: 44px; }
+.pipeline-impact { border-left: 3px solid var(--accent, #ff632e); padding: 12px; overflow-wrap: anywhere; }
+.pipeline-impact p { margin: 8px 0; }
+.pipeline-confirm { display: flex !important; flex-direction: row; align-items: flex-start; gap: 10px; }
+.pipeline-confirm input { width: 20px; height: 20px; flex: 0 0 20px; }

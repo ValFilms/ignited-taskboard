@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { demoState } from '../lib/demo';
-import { taskVersion } from '../lib/workflow';
+import { taskVersion, pipelineVersion } from '../lib/workflow';
 import * as workspace from '../app/api/workspace/route';
 import * as files from '../app/api/files/route';
 import * as login from '../app/api/login/route';
@@ -66,6 +66,20 @@ test('API regression with isolated Supabase transport', async t => {
     });
     await t.test('compare-and-swap exhaustion reports failure',async()=>{
       reset(); conflicts=5; assert.equal((await workspace.POST(req({type:'profile',clientId:'demo-1',profile:{phone:'123'}}))).status,400); assert.equal(writes,5); assert.equal(state.clients[1].phone,'');
+    });
+    await t.test('pipeline corrections verify real identity and reject stale changes during save retries', async () => {
+      reset(); const c = state.clients[0];
+      const change = {type:'movePipeline',clientId:c.id,pipelineVersion:pipelineVersion(state,c),value:c.stage === 'Editing' ? 'Onboarding' : 'Editing',reason:'Owner pipeline correction'};
+      for (const actor of ['john','carl','yaniv']) {
+        assert.equal((await workspace.POST(req({...change,role:'approver',userId:'owner'},actor))).status,403);
+      }
+      assert.equal(writes,0);
+      conflicts=1; onConflict=()=>{state.clients[0].pipelineRevision=1;};
+      assert.equal((await workspace.POST(req(change))).status,400); assert.equal(writes,1);
+      assert.equal(state.clients[0].stage,c.stage);
+      onConflict=undefined;
+      assert.equal((await workspace.POST(req({...change,pipelineVersion:pipelineVersion(state,state.clients[0])}))).status,200);
+      assert.equal(state.clients[0].stage,change.value);
     });
     await t.test('task editing and archiving enforce the authenticated assigner and owner permissions', async () => {
       reset();

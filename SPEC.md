@@ -20,6 +20,31 @@ The primary owner is the only ad approver. Yaniv is a manager with full board, c
 
 ## Client progress board
 
+### Manual pipeline correction
+
+The authenticated approver alone may choose a different pipeline stage with a
+required reason (1–2000 characters) and an explicit UI confirmation of its effects.
+The API compares the client's pipeline snapshot, including workflow fields and
+task versions, on each storage retry. Stale requests cannot overwrite newer work.
+Missing configured destination assignees reject the whole change atomically.
+
+All unfinished workflow tasks are archived before a fresh Editing, In review or
+Campaign setup assignment is created. Editing/campaign deadlines start at 24
+elapsed hours; review has no deadline. In review and Campaign setup require a
+valid edited-video Drive link, with Campaign setup constituting approver approval.
+Filming still requires completed onboarding. Moving earlier than Ready to launch
+clears launch checks and archives open automatic Closebot tasks. Ready to launch
+creates a notified Yaniv integration task unless one already exists outside Archive.
+Trial still requires launch call/payment confirmation and records launch now plus
+14 days. Active restarts the first update at 60 hours. Closed archives all open
+tasks; other corrections preserve manual custom tasks. Old stage/task alerts are
+marked read and queued deliveries removed; chat alerts remain. Trial reminder
+keys include the pipeline correction revision so a new trial can be reminded.
+Affected assignees and other owners receive a correction notice; destination work
+receives its assignment notice. Source videos, comments, completed tasks and
+activity remain saved. Raw refilm uploads append rather than discard prior files.
+No external campaign, payment, Drive, or intake operation is performed.
+
 The Active stage displays one summary card with the number of matching clients,
 including a zero state. It opens a separate, alphabetically ordered active-client
 list with name/location search and owner filtering. Board filters carry into this
