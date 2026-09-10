@@ -155,36 +155,14 @@ migration or separate messaging service is required. API checks derive authors,
 times and recipients, and client message IDs make retries idempotent. The same
 single-record storage scale limits below apply to message history.
 
-## First-time teammate walkthrough
+## Teammate entry
 
-After sign-in, teammates without a saved completion are offered a hands-on tour.
-The practice workspace renders the same Workspace, task dialogs, client drawer,
-chat and settings components as the app. A persistent guide highlights each real
-control; Next unlocks when the navigation or action succeeds. It covers received
-tasks, comments and mentions, completion, assigning to another teammate, tracking
-requested work, team/private chat, the inbox and profile/settings. Role-specific
-steps cover John’s Drive-folder submission, Karl’s campaign handoff, Yaniv’s
-onboarding/integration work, and Val’s checklist, revision, approval and launch.
-The upload and push steps explain the real controls without requiring external
-files or device permission in practice. The sample editor’s resubmission during
-the approval lesson is explicitly identified as a practice simulation.
-
-Practice uses a new fictional state per run and the normal workflow validator;
-it never calls workspace, Auth, file or push APIs. The original workspace is inert
-and its polling pauses while the tutorial is open. Practice messages/notices stay
-in memory, with pop-ups suppressed so they cannot cover the guide. Exit discards
-the run; Return to step helps recover after closing a dialog. The guide moves into
-native task dialogs/client drawers and compacts on phone input focus. Instructions
-can be expanded again. The base workspace components and permissions are shared.
-
-Finishing practice discards its state and explicitly returns to real account setup
-for optional device push and a personal password. The verified-current-password
-flow saves tutorial version 1 in Auth metadata in the same password update; invalid
-or failed changes leave setup incomplete. The preference follows the account and
-is never an authorization control. Completion from v5 is respected. Settings
-offers a replay, and completed teammates do not have to change their password again.
-Finish later leaves setup incomplete for the next sign-in/reload. Demo completion
-is in memory and real passwords are never changed.
+Sign-in opens the workspace directly, regardless of saved tutorial completion.
+No welcome dialog, automatic guided practice or replay entry is mounted.
+Personal password changes and push notification setup remain available in Settings.
+The legacy onboarding API and completion metadata remain compatible with older
+open clients; they neither gate access nor trigger a tutorial in this version.
+Client onboarding checklists and Google Form intake are unchanged.
 
 ## Intake and external systems
 

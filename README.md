@@ -105,24 +105,12 @@ Official setup references: [Vercel cron limits](https://vercel.com/docs/cron-job
 - For first activation, verify SQL, storage, login, form trigger, reminders and roles with test records before using real clients. No team invitations have been sent.
 - No live Supabase, Google Form, scheduler, email or push credentials are supplied in this repository.
 
-## Teammate onboarding
+## Team account setup
 
-First sign-in offers a hands-on guided walkthrough tailored to the teammate's
-role. It highlights real controls and waits for the person to use them: open and
-complete a task, comment with a mention, assign work, complete role-specific
-delivery exercises, send team/private messages, and find inbox/profile settings.
-The same Workspace components run with separate fictional state, no authenticated
-transport, and no real uploads or notifications. A run is discarded on exit.
-After practice, a clearly marked account setup screen offers actual push settings
-and a personal password change. Settings can replay the walkthrough. Existing
-completion is respected; completed replays do not require another password change.
-
-No migration or new secret is required. The authenticated password endpoint sends
-the password and `ignited_onboarding_version: 1` metadata in one Supabase Auth
-update after checking the current password. A read-only `/api/onboarding` POST
-checks the signed-in member's saved preference, never a body-supplied account ID.
-This metadata controls only the tutorial, never authorization. Demo mode uses
-in-memory completion and sample passwords; test edits never reach real accounts.
+Teammates enter the workspace directly after sign-in. The automatic tutorial and
+Settings replay entry have been removed. Password changes and device notification
+setup remain available independently in Settings. Existing tutorial completion
+metadata is retained for compatibility and has no effect on access.
 
 ## Team messenger
 

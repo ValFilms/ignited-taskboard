@@ -48,7 +48,6 @@ import PipelineControls from "./pipeline-controls";
 import TeamChat, { TaskDiscussion } from "./team-chat";
 import PushSettings from "./push-settings";
 import PasswordSettings from "./password-settings";
-import WelcomeOnboarding from "./welcome-onboarding";
 import GuidedCoach from "./guided-coach";
 import { practiceId, practiceState, practiceAction, tourSteps, actionMilestones } from "../lib/guided-tour";
 import { parseDriveLink } from "../lib/drive-link";
@@ -96,7 +95,7 @@ function initials(name: string) {
 }
 export default function Workspace({practiceMember,onPracticeFinish,onPracticeExit}:{practiceMember?:Member;onPracticeFinish?:()=>void;onPracticeExit?:()=>void}={}) {
   const configured=serverConfigured&&!practiceMember, auth=practiceMember?null:workspaceAuth;
-  const [tourIndex,setTourIndex]=useState(0), [tourEvents,setTourEvents]=useState<string[]>([]), [profileOpen,setProfileOpen]=useState(false), [onboardingBusy,setOnboardingBusy]=useState(false);
+  const [tourIndex,setTourIndex]=useState(0), [tourEvents,setTourEvents]=useState<string[]>([]), [profileOpen,setProfileOpen]=useState(false);
   const [chatThread, setChatThread] = useState("");
   const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
   const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string } | null>(null);
@@ -160,7 +159,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
     return () => subscription.unsubscribe();
   }, []);
   useEffect(() => {
-    if (!token || onboardingBusy) return;
+    if (!token) return;
     let active = true;
     let loading = false;
     const load = async () => {
@@ -185,7 +184,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       clearInterval(timer);
       document.removeEventListener("visibilitychange", load);
     };
-  }, [token, view, taskDialog, commentTaskId, selected, onboardingBusy]);
+  }, [token, view, taskDialog, commentTaskId, selected]);
   useEffect(() => { setChatThread(""); setCommentTaskId(null); }, [userId]);
   const me = all?.members.find((x) => x.id === userId);
   const s = all && me ? visibleState(all, me) : null;
@@ -194,7 +193,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
     if (me && !isOwner(me) && ["board", "approvals", "sales"].includes(view)) setView("work");
   }, [me, view]);
   useEffect(() => {
-    if (!all || !me || practiceMember || onboardingBusy) return;
+    if (!all || !me || practiceMember) return;
     const context = (
       document as unknown as {
         modelContext?: {
@@ -235,7 +234,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       /* Optional browser API. */
     }
     return () => lifecycle.abort();
-  }, [all, me, practiceMember, onboardingBusy]);
+  }, [all, me, practiceMember]);
   useEffect(() => {
     if (!selected) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -762,14 +761,6 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           </div>
         )}
         <main className={`content ${view === "chat" ? "messenger-content" : ""}`}>
-          {!practiceMember&&<WelcomeOnboarding key={userId} member={me} configured={configured} showLauncher={view === "settings"} api={api} onBusyChange={setOnboardingBusy} renderPractice={(finish,exit)=><Workspace practiceMember={me} onPracticeFinish={finish} onPracticeExit={exit}/>} onFinish={() => {setView("work");setSelected(null);}} save={async values => {
-            const result = await api("/api/password", {...values, finishOnboarding: true});
-            try {
-              const session = await auth!.auth.setSession({access_token: result.access_token, refresh_token: result.refresh_token});
-              if (session.error) throw session.error;
-              return "Your password is saved and your walkthrough is complete.";
-            } catch { return "Your password and walkthrough are saved. Sign out and sign in with your new password to refresh this session."; }
-          }} />}
           <div className="page-heading">
             <div>
               <p className="eyebrow">IGNITED CONTENT CO.</p>
