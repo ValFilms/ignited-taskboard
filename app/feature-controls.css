@@ -28,3 +28,11 @@
   .bulk-toolbar button {font-size:.8rem; padding:8px 10px;}
   .selectable-row {gap:6px;}
 }
+
+.chat-thread-title {min-width:0;}
+.chat-thread-title h2 {overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.chat-thread-heading .chat-assign-task {margin-left:auto; flex-shrink:0; min-height:44px; white-space:nowrap;}
+@media (max-width: 600px) {
+  .chat-thread-heading .chat-avatar {display:none;}
+  .chat-thread-heading .chat-assign-task {padding:8px 12px;}
+}

@@ -89,7 +89,7 @@ export function Conversation({ state, me, target, act, error, media, drafts, fil
   </section>;
 }
 
-export default function TeamChat({ state, me, act, error, media, selected, onSelect }: Props & { selected: string; onSelect: (thread: string) => void }) {
+export default function TeamChat({ state, me, act, error, media, selected, onSelect, onAssignTask }: Props & { selected: string; onSelect: (thread: string) => void; onAssignTask: (memberId: string) => void }) {
   const [search, setSearch] = useState("");
   const drafts = useRef<Record<string,string>>({});
   const fileDrafts = useRef<Record<string,File[]>>({});
@@ -112,7 +112,7 @@ export default function TeamChat({ state, me, act, error, media, selected, onSel
       </button>)}</nav>
       {!chats.some(c=>c.name.toLowerCase().includes(search.trim().toLowerCase())) && <p className="muted">No conversations found.</p>}
     </div>
-    <div className="chat-thread"><header className="chat-thread-heading"><button className="chat-icon chat-back" aria-label="Back to conversations" onClick={()=>onSelect("")}><ArrowLeft size={22}/></button><span className="chat-avatar">{teammate ? teammate.name[0] : <Users size={22}/>}</span><div><h2>{teammate?.name || "Team chat"}</h2><small>{teammate ? "Private conversation" : `${state.members.length} members · Everyone at Ignited`}</small></div></header>
+    <div className="chat-thread"><header className="chat-thread-heading"><button className="chat-icon chat-back" aria-label="Back to conversations" onClick={()=>onSelect("")}><ArrowLeft size={22}/></button><span className="chat-avatar">{teammate ? teammate.name[0] : <Users size={22}/>}</span><div className="chat-thread-title"><h2>{teammate?.name || "Team chat"}</h2><small>{teammate ? "Private conversation" : `${state.members.length} members · Everyone at Ignited`}</small></div>{teammate && <button className="secondary chat-assign-task" onClick={() => onAssignTask(teammate.id)}>Assign task</button>}</header>
       <Conversation key={`${me.id}:${thread}:${!!selected}`} state={state} me={me} target={target} act={act} error={error} media={media} drafts={drafts} fileDrafts={fileDrafts} />
     </div>
   </section>;

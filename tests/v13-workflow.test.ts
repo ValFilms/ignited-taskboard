@@ -59,3 +59,22 @@ test("Client templates are shared, owner-managed, versioned and independent of c
   s=transition(s,s.members[3],{type:"createTask",clientId,task:{...template,assignee:"john"}},now); const before=structuredClone(s.tasks);
   s=transition(s,s.members[0],{type:"deleteTemplate",clientId,key:template.id,templateRevision:1},now); assert.deepEqual(s.tasks,before); assert.deepEqual(s.clients[0].taskTemplates,[]);
 });
+
+test("Campaign pipeline overview includes all stages without granting private client or task access", () => {
+  const s=demoState(), karl=s.members.find(m=>m.role==='campaign')!;
+  const unrelated=s.clients.find(c=>!s.tasks.some(t=>t.clientId===c.id&&(t.assignee===karl.id||t.createdBy===karl.id)))!;
+  unrelated.email='private@example.test'; unrelated.phone='private phone'; unrelated.rawFiles=[{path:'private/file',name:'Private video'}];
+  const view=visibleState(s,karl);
+  assert.equal(view.pipeline!.clients.length,s.clients.length);
+  assert.deepEqual(view.pipeline!.clients.map(c=>c.stage),s.clients.map(c=>c.stage));
+  assert(!view.clients.some(c=>c.id===unrelated.id));
+  assert(view.tasks.every(t=>t.assignee===karl.id||t.createdBy===karl.id));
+  const card=view.pipeline!.clients.find(c=>c.id===unrelated.id)!;
+  assert.deepEqual(Object.keys(card).sort(),['id','name','location','owner','stage','trialEnd','onboardingCompleted','nextTaskDueAt'].sort());
+  assert(!JSON.stringify(view.pipeline).includes('private'));
+  assert.deepEqual(visibleState(view,karl).pipeline,view.pipeline);
+  assert.deepEqual(visibleState(view,karl).clientDirectory,view.clientDirectory);
+  assert.equal(visibleState(view,s.members.find(m=>m.role==='editor')!).pipeline,undefined);
+  assert.throws(()=>transition(s,karl,{type:'movePipeline',clientId:unrelated.id,value:'Trial',pipelineVersion:pipelineVersion(s,unrelated)},now),/Only the ad approver/);
+  assert.throws(()=>transition(s,karl,{type:'owner',clientId:unrelated.id,value:karl.id},now));
+});

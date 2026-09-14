@@ -2,6 +2,13 @@
 
 ## v13 additions (supersede the corresponding restrictions below)
 
+Campaign specialists can view the full delivery pipeline via a separate allowlisted
+summary: client name, location, owner, stage, trial end, onboarding completion count
+and next open task deadline, plus the team overdue count. This does not grant access
+to unrelated task content, client contacts, files, payment details or owner actions.
+The summary survives client-side projection of API responses. Personal chat task
+creation preselects the conversation partner, using normal task permissions and notices.
+
 Either owner may record/restart a trial from any client stage, with explicit
 start/end timestamps, payment-pending status and a reason. The end must follow
 the start; past trials can be recorded. An optimistic pipeline snapshot prevents

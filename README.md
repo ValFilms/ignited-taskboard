@@ -2,6 +2,9 @@
 
 ## Staged v13 changes
 
+- Personal chats have an **Assign task** button with the conversation partner preselected.
+- Karl (campaign specialist) can view the full delivery pipeline and Active clients,
+  with stage/owner filters and progress summaries. Owner controls remain restricted.
 - Owners can open any client and choose **Start or record a trial**, including
   Active or Closed clients. Set the actual start/end, payment-pending status and
   reason. Existing 14-day / three-day reminder defaults remain. This records

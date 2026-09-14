@@ -28,6 +28,8 @@ import {
 import {
   Action,
   Client,
+  PipelineClient,
+  canViewPipeline,
   Member,
   State,
   Task,
@@ -43,6 +45,7 @@ import NotificationToasts from "./notification-toasts";
 import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
+import Dialog from "./dialog";
 import TeamTask from "./team-task";
 import type { ChatFiles } from "./chat-media";
 import type { Attachment } from "../lib/attachments";
@@ -102,7 +105,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const [tourIndex,setTourIndex]=useState(0), [tourEvents,setTourEvents]=useState<string[]>([]), [profileOpen,setProfileOpen]=useState(false);
   const [chatThread, setChatThread] = useState("");
   const [commentTaskId, setCommentTaskId] = useState<string | null>(null);
-  const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string } | null>(null);
+  const [taskDialog, setTaskDialog] = useState<{ id?: string; clientId?: string; assigneeId?: string } | null>(null);
   const [taskFilter, setTaskFilter] = useState("mine");
   const [archiveQuery, setArchiveQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
@@ -194,8 +197,9 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const me = all?.members.find((x) => x.id === userId);
   const s = all && me ? visibleState(all, me) : null;
   const owner = me ? isOwner(me) : false;
+  const pipelineViewer = me ? canViewPipeline(me) : false;
   useEffect(() => {
-    if (me && !isOwner(me) && ["board", "approvals", "sales"].includes(view)) setView("work");
+    if (me && !isOwner(me) && (["approvals", "sales"].includes(view) || view === "board" && !canViewPipeline(me))) setView("work");
   }, [me, view]);
   useEffect(() => {
     if (!all || !me || practiceMember) return;
@@ -508,15 +512,17 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
         </form>
       </main>
     );
-  const clients = s.clients.filter(
+  const boardClients = s.pipeline?.clients || [];
+  const clients = boardClients.filter(
     (c) =>
       (ownerFilter === "all" || c.owner === ownerFilter) &&
       (stageFilter === "all" || c.stage === stageFilter || stageFilter === "production" && ["Filming", "Editing", "In review", "Campaign setup"].includes(c.stage)) &&
       `${c.name} ${c.location}`.toLowerCase().includes(query.toLowerCase()),
   );
   const activeClients = clients.filter(c => c.stage === "Active").sort((a, b) => a.name.localeCompare(b.name));
-  const totalActiveClients = s.clients.filter(c => c.stage === "Active").length;
+  const totalActiveClients = boardClients.filter(c => c.stage === "Active").length;
   const current = s.clients.find((c) => c.id === selected);
+  const pipelineCurrent = !current && boardClients.find(c => c.id === selected);
   const reviewLink = parseDriveLink(current?.driveUrl);
   const approvals = s.clients.filter((c) => c.stage === "In review" && s.tasks.some(t => t.clientId === c.id && t.status === "review" && !t.archivedAt));
   const openTasks = s.tasks.filter((t) => t.status !== "done" && !t.archivedAt);
@@ -569,7 +575,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       {!!count && <b>{count}</b>}
     </button>
   );
-  const clientCard = (c: Client, index: number) => {
+  const clientCard = (c: PipelineClient, index: number) => {
     const task = openTasks.find(t => t.clientId === c.id);
     return (
       <button
@@ -597,8 +603,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           {c.stage === "Trial"
             ? `Trial ends ${new Date(c.trialEnd!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
             : c.stage === "Onboarding"
-              ? `${Object.values(c.onboarding).filter(Boolean).length} / 4 complete`
-              : due(task)}
+              ? `${c.onboardingCompleted} / 4 complete`
+              : owner ? due(task) : c.nextTaskDueAt ? `Due ${date(c.nextTaskDueAt)}` : "No deadline"}
         </span>
         <div className="card-footer">
           <span>
@@ -688,7 +694,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           <ChevronRight size={16} />
         </button>
         <p className="nav-label">WORKSPACE</p>
-        {owner &&
+        {pipelineViewer &&
           nav("board", "Client progress", <LayoutDashboard size={19} />)}
         {nav("work", "My work", <ListTodo size={19} />, mine.length)}
         {owner &&
@@ -773,7 +779,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                   setTaskFilter("mine");
                   setSelected(null);
                   setView(
-                    e.target.value === "john" || e.target.value === "carl"
+                    e.target.value === "john"
                       ? "work"
                       : "board",
                   );
@@ -828,14 +834,14 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               </button>
             </div>
           )}
-          {view === "board" && owner && !activeClientsOpen && (
+          {view === "board" && pipelineViewer && !activeClientsOpen && (
             <>
               <div className="stats">
                 <button className="stat-card" onClick={() => { setStageFilter("production"); document.getElementById("delivery-board")?.scrollIntoView({ behavior: "smooth" }); }}>
                   <span>In production</span>
                   <strong>
                     {
-                      s.clients.filter((c) =>
+                      boardClients.filter((c) =>
                         [
                           "Filming",
                           "Editing",
@@ -850,11 +856,11 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                     <Play size={19} />
                   </span>
                 </button>
-                <button className="stat-card" onClick={() => setView("approvals")}>
+                <button className="stat-card" onClick={() => {if (owner) setView("approvals"); else setStageFilter("In review");}}>
                   <span>Awaiting approval</span>
                   <strong>
-                    {approvals.length}
-                    <small>ready for your eyes</small>
+                    {owner ? approvals.length : boardClients.filter(c => c.stage === "In review").length}
+                    <small>{owner ? "ready for your eyes" : "awaiting owner review"}</small>
                   </strong>
                   <span className="stat-icon purple">
                     <CheckCircle2 size={19} />
@@ -863,19 +869,19 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                 <button className="stat-card" onClick={() => { setStageFilter("Trial"); document.getElementById("delivery-board")?.scrollIntoView({ behavior: "smooth" }); }}>
                   <span>Live trials</span>
                   <strong>
-                    {s.clients.filter((c) => c.stage === "Trial").length}
+                    {boardClients.filter((c) => c.stage === "Trial").length}
                     <small>building momentum</small>
                   </strong>
                   <span className="stat-icon green">
                     <Flame size={19} />
                   </span>
                 </button>
-                <button className="stat-card" onClick={() => { setTaskFilter("overdue"); setView("work"); }}>
+                <button className="stat-card" onClick={() => { setTaskFilter(owner ? "overdue" : "mine"); setView("work"); }}>
                   <span>Overdue tasks</span>
                   <strong>
-                    {overdue.length.toString().padStart(2, "0")}
+                    {(s.pipeline?.overdueCount || 0).toString().padStart(2, "0")}
                     <small>
-                      {overdue.length ? "need attention" : "all clear for now"}
+                      {owner ? (overdue.length ? "need attention" : "all clear for now") : "across the team · open my work"}
                     </small>
                   </strong>
                   <span className="stat-icon">
@@ -962,7 +968,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               </p>
             </>
           )}
-          {view === "board" && owner && activeClientsOpen && (
+          {view === "board" && pipelineViewer && activeClientsOpen && (
             <section className="active-clients-view" aria-labelledby="active-clients-title">
               <button className="secondary" onClick={() => {
                 returnToActiveGroup.current = true;
@@ -1034,7 +1040,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               )}
             </div>
           )}
-          {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} media={chatFiles} selected={chatThread} onSelect={setChatThread} />}
+          {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} media={chatFiles} selected={chatThread} onSelect={setChatThread} onAssignTask={assigneeId => {setError(""); setTaskDialog({assigneeId});}} />}
           {view === "notifications" && <div className="panel"><div className="panel-heading"><h2>Your notifications</h2></div><BulkInbox key={userId} notices={s.notifications} act={act} open={openNotice}/></div>}
           {view === "sales" && owner && (
             <div className="panel connection">
@@ -1209,6 +1215,15 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           )}
         </main>
       </div>
+      {pipelineCurrent && <Dialog title="Client progress" onClose={() => setSelected(null)}>
+        <h3>{pipelineCurrent.name}</h3><p>{pipelineCurrent.location}</p><span className="badge">{pipelineCurrent.stage}</span>
+        <p>Owner: {s.members.find(m => m.id === pipelineCurrent.owner)?.name || "Agency owner"}</p>
+        {pipelineCurrent.stage === "Onboarding" && <p>Onboarding: {pipelineCurrent.onboardingCompleted} / 4 complete</p>}
+        {pipelineCurrent.trialEnd && pipelineCurrent.stage === "Trial" && <p>Trial ends: {date(pipelineCurrent.trialEnd)}</p>}
+        {pipelineCurrent.nextTaskDueAt && <p>Next task due: {date(pipelineCurrent.nextTaskDueAt)}</p>}
+        <p className="muted">Your assigned work appears in My work. Owners manage this client's pipeline.</p>
+        <button className="primary" disabled={pipelineCurrent.stage === "Closed"} onClick={() => {setError(""); setSelected(null); setTaskDialog({clientId:pipelineCurrent.id});}}>Assign a task</button>
+      </Dialog>}
       {current && (
         <div className="drawer-backdrop" onClick={() => setSelected(null)}>
           <section
@@ -1664,7 +1679,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           </section>
         </div>
       )}
-      {taskDialog && <TeamTask media={chatFiles} key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} onOpenClient={id => {setTaskDialog(null); setSelected(id);}} />}
+      {taskDialog && <TeamTask media={chatFiles} key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} assigneeId={taskDialog.assigneeId} act={act} error={error} onClose={() => setTaskDialog(null)} onOpenClient={id => {setTaskDialog(null); setSelected(id);}} />}
       {commentTaskId && <TaskDiscussion media={chatFiles} key={`${userId}:${commentTaskId}`} state={s} me={me} taskId={commentTaskId} act={act} error={error} onClose={() => setCommentTaskId(null)} />}
       {!practiceMember&&<NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />}
     </div>

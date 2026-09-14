@@ -73,7 +73,9 @@ export type Notice = {
   messageId?: string;
   threadId?: string;
 };
+export type PipelineClient = Pick<Client, "id" | "name" | "location" | "owner" | "stage" | "trialEnd"> & { onboardingCompleted: number; nextTaskDueAt: string | null };
 export type State = {
+  pipeline?: { clients: PipelineClient[]; overdueCount: number };
   clientDirectory?: Pick<Client, "id" | "name" | "stage" | "taskTemplates" | "templateRevision">[];
   messages?: Message[];
   pushDevices?: Device[];
@@ -103,6 +105,7 @@ export const checklist = [
 ];
 export const isOwner = (m: Member) =>
   m.role === "approver" || m.role === "manager";
+export const canViewPipeline = (m: Member) => isOwner(m) || m.role === "campaign";
 export const canManageTask = (t: Task, m: Member) => isOwner(m) || t.createdBy === m.id;
 export const canChangeTaskClient = (t: Task) => t.kind === "custom" && !t.campaignTaskId;
 export const canAssignTask = (t: Task, m: Member) => t.kind === "custom" ||
@@ -122,7 +125,7 @@ const assert = (v: unknown, message: string) => {
   if (!v) throw new Error(message);
 };
 export function visibleState(s: State, m: Member): State {
-  const { pushDevices: _devices, pushQueue: _queue, ...publicState } = s;
+  const { pushDevices: _devices, pushQueue: _queue, pipeline: savedPipeline, ...publicState } = s;
   const tasks = isOwner(m)
     ? s.tasks
     : s.tasks.filter((t) => t.assignee === m.id || t.createdBy === m.id);
@@ -131,7 +134,13 @@ export function visibleState(s: State, m: Member): State {
   const messageIds = new Set(messages?.map(message => message.id));
   return {
     ...publicState,
-    clientDirectory: s.clients.map(({id, name, stage, taskTemplates, templateRevision}) => ({id, name, stage, taskTemplates, templateRevision})),
+    ...(canViewPipeline(m) ? {pipeline: savedPipeline || {
+      clients: s.clients.map(c => ({id: c.id, name: c.name, location: c.location, owner: c.owner, stage: c.stage, trialEnd: c.trialEnd,
+        onboardingCompleted: Object.values(c.onboarding).filter(Boolean).length,
+        nextTaskDueAt: s.tasks.find(t => t.clientId === c.id && t.status !== "done" && !t.archivedAt)?.dueAt || null})),
+      overdueCount: s.tasks.filter(t => t.status !== "done" && !t.archivedAt && t.dueAt && Date.parse(t.dueAt) < Date.now()).length,
+    }} : {}),
+    clientDirectory: s.clientDirectory || s.clients.map(({id, name, stage, taskTemplates, templateRevision}) => ({id, name, stage, taskTemplates, templateRevision})),
     ...(messages ? {messages} : {}),
     members: s.members.map(({ id, name, role }) => ({ id, name, role })),
     tasks,

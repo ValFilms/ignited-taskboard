@@ -15,8 +15,8 @@ function localDeadline(value: string | null) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function TeamTask({ state, me, task, taskId, clientId = "", act, onClose, onOpenClient, error, media }: {
-  state: State; me: Member; task?: Task; taskId?: string; clientId?: string;
+export default function TeamTask({ state, me, task, taskId, clientId = "", assigneeId, act, onClose, onOpenClient, error, media }: {
+  state: State; me: Member; task?: Task; taskId?: string; clientId?: string; assigneeId?: string;
   act: (action: Action) => Promise<boolean>; onClose: () => void; onOpenClient?: (id: string) => void; error?: string; media?: ChatFiles;
 }) {
   const [busy, setBusy] = useState(false), [failed, setFailed] = useState(false);
@@ -97,6 +97,6 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
         <p className="muted">Visible to owners, the assignee, and the task creator.</p>
         <Conversation key={`${me.id}:${task.id}`} state={state} me={me} target={{kind: "task", taskId: task.id}} act={act} error={error} media={media} />
       </>}
-    </> : <ClientTaskForm state={state} me={me} clientId={clientId} run={run} busy={busy} />}
+    </> : <ClientTaskForm state={state} me={me} clientId={clientId} assigneeId={assigneeId} run={run} busy={busy} />}
   </Dialog>;
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Action, Member, State, TaskTemplate, isOwner } from "../lib/workflow";
-export default function ClientTaskForm({state, me, clientId = "", run, busy}: {state: State; me: Member; clientId?: string; run: (a: Action, close?: boolean) => Promise<boolean>; busy: boolean}) {
+export default function ClientTaskForm({state, me, clientId = "", assigneeId, run, busy}: {state: State; me: Member; clientId?: string; assigneeId?: string; run: (a: Action, close?: boolean) => Promise<boolean>; busy: boolean}) {
   const [client, setClient] = useState(clientId), [title, setTitle] = useState(""), [notes, setNotes] = useState(""), [category, setCategory] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [templateRevision, setTemplateRevision] = useState((state.clientDirectory || state.clients).find(c => c.id === clientId)?.templateRevision || 0);
@@ -21,7 +21,7 @@ export default function ClientTaskForm({state, me, clientId = "", run, busy}: {s
       const id = templateId || crypto.randomUUID();
       if (await run({type: "saveTemplate", clientId: client, templateRevision, template: {id, title, notes, category}})) {setTemplateId(id); setTemplateRevision(templateRevision + 1);}
     }}>{templateId ? "Update client template" : "Save as client template"}</button>{templateId && <button type="button" className="text-button" onClick={async () => {if (await run({type: "deleteTemplate", clientId: client, templateRevision, key: templateId})) {setTemplateId(""); setTemplateRevision(templateRevision + 1);}}}>Remove template</button>}<small>Templates are shared with teammates. Updating or removing one leaves existing tasks unchanged.</small></div>}
-    <label>Assign to<select aria-label="Assign to" name="assignee" defaultValue={me.id} required>{state.members.map(m => <option value={m.id} key={m.id}>{m.name}</option>)}</select></label>
+    <label>Assign to<select aria-label="Assign to" name="assignee" defaultValue={state.members.some(m => m.id === assigneeId) ? assigneeId : me.id} required>{state.members.map(m => <option value={m.id} key={m.id}>{m.name}</option>)}</select></label>
     <label>Due date (optional)<input type="datetime-local" name="dueAt" /></label>
     <p className="muted">Times use your device’s timezone. The assignee receives a notification.</p>
     <button className="primary">{busy ? "Saving…" : "Assign task"}</button>
