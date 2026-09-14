@@ -48,6 +48,7 @@ import ProfileMenu from "./profile-menu";
 import Dialog from "./dialog";
 import TeamTask from "./team-task";
 import type { ChatFiles } from "./chat-media";
+import { canReadMessage } from "../lib/messaging";
 import type { Attachment } from "../lib/attachments";
 import TrialControls from "./trial-controls";
 import { BulkTasks, BulkInbox } from "./bulk-actions";
@@ -113,6 +114,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const activeGroupRef = useRef<HTMLButtonElement>(null);
   const activeListHeadingRef = useRef<HTMLHeadingElement>(null);
   const returnToActiveGroup = useRef(false);
+  const demoAudio = useRef(new Map<string, string>());
+  useEffect(() => {const urls = demoAudio.current; return () => {urls.forEach(url => URL.revokeObjectURL(url)); urls.clear();};}, []);
   const uploadedChatFiles = useRef(new Map<string, {file: File; attachment: Attachment}[]>());
   const changes = useRef(0);
   const currentUser = useRef("");
@@ -332,10 +335,22 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
     }
   }
   const chatFiles: ChatFiles = {
+    demo: !configured,
     send: async (message, files) => {
       const actor = currentUser.current; changes.current++; setError("");
       try {
-        if (!configured) throw new Error("Sending attachments requires a connected test workspace. You can record and review a memo here, but demo files are not uploaded or sent.");
+        if (!configured) {
+          if (practiceMember) throw new Error("Voice sending is available in the demo workspace outside the guided practice.");
+          if (!files.every(file => file.type.startsWith("audio/"))) throw new Error("Pictures and other files require a connected test workspace. Voice memos can be tried in this browser session.");
+          const attachments = files.map((file, index) => ({path:`demo-audio/${message.id}/${index}`, name:file.name, size:file.size, contentType:file.type}));
+          const added: string[] = [];
+          try {
+            files.forEach((file,index) => {const path = attachments[index].path; if (!demoAudio.current.has(path)) {demoAudio.current.set(path, URL.createObjectURL(file)); added.push(path);}});
+            if (await act({type:"sendMessage", message:{...message, attachments}})) return true;
+          } catch(e) {setError((e as Error).message);}
+          added.forEach(path => {URL.revokeObjectURL(demoAudio.current.get(path)!); demoAudio.current.delete(path);});
+          return false;
+        }
         const saved = uploadedChatFiles.current.get(message.id) || []; uploadedChatFiles.current.set(message.id, saved);
         for (const file of files) {
           if (saved.some(item => item.file === file)) continue;
@@ -349,7 +364,13 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       } catch(e) {setError((e as Error).message); return false;}
     },
     open: async (messageId, file, download) => {
-      if (!configured) throw new Error("Attachments require the connected workspace");
+      if (!configured) {
+        const message = all?.messages?.find(item => item.id === messageId);
+        if (!all || !me || !message || !canReadMessage(all,me,message) || !message.attachments?.some(item => item.path === file.path)) throw new Error("This voice memo is not available to your account.");
+        const url = demoAudio.current.get(file.path);
+        if (!url) throw new Error("This demo recording is no longer in this browser session.");
+        return url;
+      }
       const result = await api("/api/chat-files", {type:"download", messageId, path:file.path, download}); return result.url;
     },
   };

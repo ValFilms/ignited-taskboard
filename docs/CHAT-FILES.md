@@ -55,6 +55,10 @@ verified. Existing filming uploads continue using their original bucket.
 5. Allow and deny microphone access. Record, stop, preview, discard and send a
    memo. Navigating away while recording must release the microphone.
 
-Without Supabase configuration, the fictional demo can preview local recordings,
-but sending attachments shows a setup message and preserves the draft. Demo mode
-never represents a local file as a successful server upload or sends real notices.
+Without Supabase configuration, non-audio attachments show a setup message and
+preserve the draft. Demo mode never uploads local files or sends real notices.
+
+Voice memos can be sent without message text. The fictional demo sends audio locally
+within the current browser session, including playback after switching preview roles;
+it does not deliver to real teammates or persist recordings after reload. Other demo
+file uploads remain unavailable. Real voice delivery still requires private chat storage.

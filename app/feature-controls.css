@@ -36,3 +36,27 @@
   .chat-thread-heading .chat-avatar {display:none;}
   .chat-thread-heading .chat-assign-task {padding:8px 12px;}
 }
+
+.inbox-content {padding:0 22px 12px;}
+.inbox-toolbar {margin:0; padding:16px 0; justify-content:space-between; border-bottom:1px solid var(--line); gap:12px 20px;}
+.inbox-selection, .inbox-actions {display:flex; align-items:center; flex-wrap:wrap; gap:8px;}
+.inbox-selection {gap:12px;}
+.inbox-selection > span {white-space:nowrap;}
+.inbox-toolbar button {min-height:44px; white-space:nowrap;}
+.inbox-row {gap:12px; padding:8px 12px; margin:8px -12px 0; border-radius:10px;}
+.inbox-row + .inbox-row {border-top:1px solid var(--line);}
+.inbox-row.is-selected {background:var(--raised);}
+.inbox-row > input[type=checkbox] {cursor:pointer;}
+.inbox-row .notice {align-items:flex-start; gap:12px; padding:12px 0; border:0; background:transparent; line-height:1.5;}
+.inbox-row .notice-copy {min-width:0; overflow-wrap:anywhere;}
+.inbox-row .notice small {margin-top:4px; line-height:1.4;}
+.inbox-row .read-dot, .inbox-row .unread-dot {flex:none; margin-top:7px;}
+.inbox-row:hover {background:var(--raised);}
+@media (max-width:760px) {
+  .inbox-content {padding:0 16px 8px;}
+  .inbox-toolbar {align-items:stretch;}
+  .inbox-selection {justify-content:space-between; width:100%;}
+  .inbox-actions {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%;}
+  .inbox-actions .inbox-mark-all {grid-column:1 / -1;}
+  .inbox-row {gap:10px;}
+}

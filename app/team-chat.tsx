@@ -74,6 +74,7 @@ export function Conversation({ state, me, target, act, error, media, drafts, fil
       </article>)}
     </div>
     {archived ? <p className="muted archive-comment-note">Comments are saved. Restore the task to continue the conversation.</p> : <form className="message-composer" onSubmit={e => {e.preventDefault(); void send();}}>
+      {media?.demo && <small className="muted">Demo voice memos stay in this browser session.</small>}
       <MediaPicker files={files} onChange={changeFiles} busy={busy} onRecording={setRecording}/>
       {mentionOpen && <div className="mention-options" aria-label="Mention a teammate">{members.filter(m => m.id !== me.id).map(m => <button type="button" key={m.id} disabled={busy} onClick={() => {
         setBody(old => `${old}${old && !/\s$/.test(old) ? " " : ""}@${mentionName(m)} `.slice(0,4000)); setMentionOpen(false); textarea.current?.focus();

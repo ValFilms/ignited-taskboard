@@ -18,13 +18,15 @@ export function BulkInbox({notices, act, open}: {notices: State["notifications"]
   const [selected, setSelected] = useState<string[]>([]), [busy, setBusy] = useState(false);
   const ids = selected.filter(id => notices.some(n => n.id === id));
   const run = async (value: string, all = false) => {setBusy(true); try {if (await act({type: "bulkNotices", ids: all ? notices.slice(0,1000).map(n => n.id) : ids, value})) setSelected([]);} finally {setBusy(false);}};
-  return <><div className="bulk-toolbar">
+  return <div className="inbox-content"><div className="bulk-toolbar inbox-toolbar">
+    <div className="inbox-selection">
     <button className="secondary" disabled={busy || !notices.length} onClick={() => setSelected(ids.length === Math.min(notices.length,1000) ? [] : notices.slice(0,1000).map(n => n.id))}>{ids.length && ids.length === Math.min(notices.length,1000) ? "Clear selection" : "Select all"}</button>
-    <span aria-live="polite">{ids.length} selected</span>
+    <span aria-live="polite">{ids.length} selected</span></div>
+    <div className="inbox-actions">
     <button className="secondary" disabled={busy || !ids.length} onClick={() => void run("read")}>Mark read</button>
     <button className="secondary" disabled={busy || !ids.length} onClick={() => void run("unread")}>Mark unread</button>
-    <button data-tour="read" className="text-button" disabled={busy || !notices.length} onClick={() => void run("read", true)}>Mark all read</button>
-  </div>{notices.length > 1000 && <p className="muted">Select up to 1,000 notifications at a time.</p>}
-  {notices.slice().reverse().map(n => <div className="selectable-row" key={n.id}><input type="checkbox" aria-label={`Select notification: ${n.text}`} checked={ids.includes(n.id)} disabled={busy} onChange={() => setSelected(old => old.includes(n.id) ? old.filter(id => id !== n.id) : [...old, n.id])} /><button className="notice" onClick={() => open(n)}><span className={n.read ? "read-dot" : "unread-dot"}/><span>{n.text}<small>{new Date(n.createdAt).toLocaleString()}</small></span></button></div>)}
-  {!notices.length && <p className="empty">Your inbox is clear.</p>}</>;
+    <button data-tour="read" className="secondary inbox-mark-all" disabled={busy || !notices.length} onClick={() => void run("read", true)}>Mark all read</button>
+  </div></div>{notices.length > 1000 && <p className="muted">Select up to 1,000 notifications at a time.</p>}
+  {notices.slice().reverse().map(n => <div className={`selectable-row inbox-row ${ids.includes(n.id) ? "is-selected" : ""}`} key={n.id}><input type="checkbox" aria-label={`Select notification: ${n.text}`} checked={ids.includes(n.id)} disabled={busy} onChange={() => setSelected(old => old.includes(n.id) ? old.filter(id => id !== n.id) : [...old, n.id])} /><button className="notice" onClick={() => open(n)}><span className={n.read ? "read-dot" : "unread-dot"}/><span className="notice-copy">{n.text}<small>{new Date(n.createdAt).toLocaleString()}</small></span></button></div>)}
+  {!notices.length && <p className="empty">Your inbox is clear.</p>}</div>;
 }

@@ -4,14 +4,15 @@ import { Mic, Paperclip, Square, X } from "lucide-react";
 import { Attachment, MAX_ATTACHMENTS, baseType, validateAttachment } from "../lib/attachments";
 import type { MessageInput } from "../lib/messaging";
 export type ChatFiles = {
+  demo?: boolean;
   send: (message: MessageInput, files: File[]) => Promise<boolean>;
   open: (messageId: string, file: Attachment, download?: boolean) => Promise<string>;
 };
 export function AttachmentView({messageId, file, media}: {messageId: string; file: Attachment; media?: ChatFiles}) {
   const [url, setUrl] = useState(""), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const open = async () => {setBusy(true); setError(""); try {if (!media) throw Error("Attachments require the connected workspace"); setUrl(await media.open(messageId,file));} catch (e) {setError((e as Error).message);} finally {setBusy(false);}};
-  return <div className="chat-attachment"><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(1)} MB</small>
-    {!url ? <button className="secondary" disabled={busy} onClick={() => void open()}>{busy ? "Opening…" : file.contentType.startsWith("audio/") ? "Play voice / audio" : "Open attachment"}</button> : <>
+  return <div className="chat-attachment"><strong>{file.name.startsWith("Voice memo ") ? "Voice memo" : file.name}</strong>{!file.contentType.startsWith("audio/") && <small>{(file.size / 1024 / 1024).toFixed(1)} MB</small>}
+    {!url ? <button className="secondary" disabled={busy} onClick={() => void open()}>{busy ? "Opening…" : file.contentType.startsWith("audio/") ? "Play voice memo" : "Open attachment"}</button> : <>
       {file.contentType.startsWith("image/") && <img src={url} alt={file.name} />}
       {file.contentType.startsWith("video/") && <video src={url} controls playsInline preload="metadata" />}
       {file.contentType.startsWith("audio/") && <audio src={url} controls preload="metadata" />}
@@ -62,7 +63,7 @@ export function MediaPicker({files, onChange, busy, onRecording}: {files: File[]
       {recording ? <><span role="status">Recording · up to 5 minutes</span><button type="button" className="secondary" onClick={() => stop()}><Square size={16}/>Stop and review</button><button type="button" className="text-button" onClick={() => stop(true)}>Discard</button></> : <button type="button" className="chat-icon" aria-label="Record voice memo" disabled={busy || starting || files.length >= MAX_ATTACHMENTS} onClick={() => void start()}><Mic size={20}/>{starting && "Opening microphone…"}</button>}
       <small>Up to 5 files · 50 MB each</small>
     </div>
-    {files.map((file,i) => <div className="pending-attachment" key={`${i}:${file.name}`}><span>{file.name}</span>{file.type.startsWith("audio/") && <LocalAudio file={file}/>}<button type="button" className="chat-icon" aria-label={`Remove ${file.name}`} disabled={busy || recording || starting} onClick={() => onChange(files.filter((_,j) => j!==i))}><X size={16}/></button></div>)}
+    {files.map((file,i) => <div className="pending-attachment" key={`${i}:${file.name}`}><span>{file.name.startsWith("Voice memo ") ? "Voice memo · ready to send" : file.name}</span>{file.type.startsWith("audio/") && <LocalAudio file={file}/>}<button type="button" className="chat-icon" aria-label={`Remove ${file.name}`} disabled={busy || recording || starting} onClick={() => onChange(files.filter((_,j) => j!==i))}><X size={16}/></button></div>)}
     {error && <p className="error" role="alert">{error}</p>}
   </div>;
 }

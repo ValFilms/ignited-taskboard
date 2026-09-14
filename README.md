@@ -193,3 +193,8 @@ and filter by owner. Select a client for their usual details and tasks; closing
 those details returns to the list. **Back to board** returns to the kanban.
 Board search and owner filters carry into the list and can be cleared there.
 Clients enter and leave the group automatically when their stage changes.
+
+Voice memos can be sent without message text. The fictional demo sends audio locally
+within the current browser session, including playback after switching preview roles;
+it does not deliver to real teammates or persist recordings after reload. Other demo
+file uploads remain unavailable. Real voice delivery still requires private chat storage.

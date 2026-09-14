@@ -212,3 +212,8 @@ The Google Form is authoritative. GHL remains the separate sales system; Closebo
 Without Supabase public configuration, a clearly labeled demo uses fictional data held in memory for one browser session. Role switching is available only in that demo. No uploads, email, push or live sync are simulated as successful. With Supabase configured, the app requires sign-in and the demo disappears. Production activation requires the SQL schema, private bucket, registered team Auth users, environment secrets and verified scheduler/form setup. Web Push additionally requires VAPID sender configuration and each device's permission/subscription. Email and automatic Drive folder sync are future work. No public signup or automatic team invitations.
 
 The version-one durable store uses a single JSON workspace record with optimistic version checks and retry to prevent lost updates. Appropriate for a small internal team, not an unbounded CRM. Notifications/activity are retained; archive/retention policy and normalized tables are future scale work.
+
+Voice memos can be sent without message text. The fictional demo sends audio locally
+within the current browser session, including playback after switching preview roles;
+it does not deliver to real teammates or persist recordings after reload. Other demo
+file uploads remain unavailable. Real voice delivery still requires private chat storage.
