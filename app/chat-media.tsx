@@ -22,7 +22,7 @@ export function AttachmentView({messageId, file, media}: {messageId: string; fil
 function LocalAudio({file}: {file: File}) {
   const [url,setUrl] = useState("");
   useEffect(() => {const value = URL.createObjectURL(file); setUrl(value); return () => URL.revokeObjectURL(value);}, [file]);
-  return <audio controls src={url} preload="metadata" aria-label="Preview voice memo"/>;
+  return <audio controls src={url || undefined} preload="metadata" aria-label="Preview voice memo"/>;
 }
 export function MediaPicker({files, onChange, busy, onRecording}: {files: File[]; onChange: (files: File[]) => void; busy: boolean; onRecording: (value: boolean) => void}) {
   const input = useRef<HTMLInputElement>(null), recorder = useRef<MediaRecorder | null>(null), stream = useRef<MediaStream | null>(null), chunks = useRef<Blob[]>([]);
