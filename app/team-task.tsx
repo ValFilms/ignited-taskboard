@@ -4,6 +4,8 @@ import { Archive, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import type { Action, Member, State, Task } from "../lib/workflow";
 import { canAssignTask, canChangeTaskClient, canManageTask, isOwner, taskVersion } from "../lib/workflow";
 import Dialog from "./dialog";
+import type { ChatFiles } from "./chat-media";
+import ClientTaskForm from "./client-task-form";
 import { Conversation } from "./team-chat";
 
 function localDeadline(value: string | null) {
@@ -13,9 +15,9 @@ function localDeadline(value: string | null) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function TeamTask({ state, me, task, taskId, clientId = "", act, onClose, onOpenClient, error }: {
+export default function TeamTask({ state, me, task, taskId, clientId = "", act, onClose, onOpenClient, error, media }: {
   state: State; me: Member; task?: Task; taskId?: string; clientId?: string;
-  act: (action: Action) => Promise<boolean>; onClose: () => void; onOpenClient?: (id: string) => void; error?: string;
+  act: (action: Action) => Promise<boolean>; onClose: () => void; onOpenClient?: (id: string) => void; error?: string; media?: ChatFiles;
 }) {
   const [busy, setBusy] = useState(false), [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null), [deleting, setDeleting] = useState<Task | null>(null);
@@ -37,7 +39,7 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
     e.preventDefault(); const data = new FormData(e.currentTarget), due = String(data.get("dueAt") || "");
     void run({type: "editTask", taskId: snapshot.id, taskVersion: taskVersion(snapshot),
       clientId: canChangeTaskClient(snapshot) ? editingClientId : snapshot.clientId, task: {
-      title: String(data.get("title") || ""), notes: String(data.get("notes") || ""),
+      category: String(data.get("category") || ""), title: String(data.get("title") || ""), notes: String(data.get("notes") || ""),
       assignee: snapshot.status === "done" ? snapshot.assignee : String(data.get("assignee")),
       dueAt: snapshot.status !== "open" || due === localDeadline(snapshot.dueAt) ? snapshot.dueAt : due ? new Date(due).toISOString() : null,
     }}).then(saved => {if (saved) setEditing(null);});
@@ -51,10 +53,11 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
       <label>Client<select name="clientId" value={editingClientId} onChange={e => setEditingClientId(e.target.value)} disabled={!canChangeTaskClient(snapshot)}>
         <option value="">General team task</option>
         {editingClientId && !state.clients.some(c => c.id === editingClientId) && <option value={editingClientId}>Unavailable client</option>}
-        {state.clients.filter(c => c.id === snapshot.clientId || c.id === editingClientId || canChangeTaskClient(snapshot) && c.stage !== "Closed")
+        {(state.clientDirectory || state.clients).filter(c => c.id === snapshot.clientId || c.id === editingClientId || canChangeTaskClient(snapshot) && c.stage !== "Closed")
           .sort((a, b) => a.name.localeCompare(b.name)).map(c => <option key={c.id} value={c.id}>{c.name}{c.stage === "Closed" ? " (closed)" : ""}</option>)}
       </select></label>
       {!canChangeTaskClient(snapshot) && <p className="muted">This task is part of its client's workflow and stays linked to that client.</p>}
+      <label>Category<input name="category" maxLength={80} defaultValue={snapshot.category || ""}/></label>
       <label>Instructions<textarea aria-label="Instructions" name="notes" maxLength={4000} rows={4} defaultValue={snapshot.notes || ""} /></label>
       <label>Due date (optional)<input type="datetime-local" name="dueAt" defaultValue={localDeadline(snapshot.dueAt)} disabled={snapshot.status !== "open"} /></label>
       <p className="muted">Times use your device’s timezone. {snapshot.status === "review" ? "The deadline stays paused during approval." : snapshot.status === "done" ? "Completed tasks keep their assignee and deadline." : "The original deadline stays unless you change it."}</p>
@@ -92,24 +95,8 @@ export default function TeamTask({ state, me, task, taskId, clientId = "", act, 
         </>}
         <h3>Task comments</h3>
         <p className="muted">Visible to owners, the assignee, and the task creator.</p>
-        <Conversation key={`${me.id}:${task.id}`} state={state} me={me} target={{kind: "task", taskId: task.id}} act={act} error={error} />
+        <Conversation key={`${me.id}:${task.id}`} state={state} me={me} target={{kind: "task", taskId: task.id}} act={act} error={error} media={media} />
       </>}
-    </> : <form data-tour="task-form" onSubmit={e => {
-      e.preventDefault(); const data = new FormData(e.currentTarget), due = String(data.get("dueAt") || "");
-      void run({type: "createTask", clientId: String(data.get("clientId") || ""), task: {
-        title: String(data.get("title") || ""), notes: String(data.get("notes") || ""), assignee: String(data.get("assignee")),
-        dueAt: due ? new Date(due).toISOString() : null,
-      }}, true);
-    }}>
-      <fieldset disabled={busy} className="task-fields">
-        <label>Task title<input name="title" required maxLength={160} autoFocus placeholder="Refilm the opening shot" /></label>
-        <label>Assign to<select aria-label="Assign to" name="assignee" defaultValue={me.id} required>{state.members.map(m => <option value={m.id} key={m.id}>{m.name}</option>)}</select></label>
-        <label>Client<select name="clientId" defaultValue={clientId}><option value="">General team task</option>{state.clients.filter(c => c.stage !== "Closed").map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label>Instructions<textarea aria-label="Instructions" name="notes" maxLength={4000} rows={4} placeholder="What needs to happen? Include the details your teammate needs." /></label>
-        <label>Due date (optional)<input type="datetime-local" name="dueAt" /></label>
-        <p className="muted">Times use your device’s timezone. The assignee receives a notification.</p>
-        <div className="dialog-actions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary">{busy ? "Assigning…" : "Assign task"}</button></div>
-      </fieldset>
-    </form>}
+    </> : <ClientTaskForm state={state} me={me} clientId={clientId} run={run} busy={busy} />}
   </Dialog>;
 }

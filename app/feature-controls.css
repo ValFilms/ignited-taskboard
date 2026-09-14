@@ -1,0 +1,30 @@
+.bulk-toolbar, .media-tools, .template-tools {display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0;}
+.bulk-toolbar button, .bulk-confirm button {min-height:40px;}
+.bulk-toolbar span {color:var(--muted); font-size:.85rem;}
+.selectable-row {display:flex; align-items:center; gap:10px; min-width:0;}
+.selectable-row > :last-child {flex:1; min-width:0;}
+.selectable-row > input[type=checkbox], .check-label input {width:20px; height:20px; flex:none; margin:0; accent-color:var(--accent);}
+.check-label {display:flex; align-items:center; gap:10px;}
+.bulk-confirm {padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--raised); margin:12px 0;}
+.bulk-confirm button {margin-right:8px;}
+.trial-controls {border-bottom:1px solid var(--line); padding:12px 0 18px; margin-bottom:16px;}
+.template-tools small {flex-basis:100%; color:var(--muted);}
+.chat-attachment {display:flex; flex-direction:column; gap:8px; margin-top:8px; overflow-wrap:anywhere;}
+.chat-attachment img, .chat-attachment video {max-width:100%; max-height:320px; object-fit:contain; border-radius:8px;}
+.chat-attachment audio, .pending-attachment audio {max-width:100%; width:260px;}
+.chat-attachment a {color:inherit; text-decoration:underline;}
+.pending-attachment {display:flex; align-items:center; flex-wrap:wrap; gap:8px; background:var(--raised); padding:8px; margin:4px 0; border-radius:8px;}
+.pending-attachment span {flex:1; overflow-wrap:anywhere; min-width:0; font-size:.8rem;}
+.media-tools {margin:0 0 6px; gap:6px;}
+.media-tools small {color:var(--muted); font-size:.7rem;}
+.media-picker {max-height:180px; overflow-y:auto; overscroll-behavior:contain;}
+.message-history {overscroll-behavior:contain; overflow-anchor:none;}
+@media (max-width:760px) {
+  .message-composer textarea {font-size:16px;}
+  .chat-thread-heading {flex-shrink:0;}
+  .chat-open .message-history {min-height:0;}
+  .chat-open .message-composer {padding-bottom:max(8px, env(safe-area-inset-bottom));}
+  .bulk-toolbar {gap:8px;}
+  .bulk-toolbar button {font-size:.8rem; padding:8px 10px;}
+  .selectable-row {gap:6px;}
+}

@@ -1688,7 +1688,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .chat-panel { display: block; height: auto; min-height: 380px; border-radius: 10px; }
   .chat-list { border: 0; }
   .chat-thread { display: none; }
-  .chat-open { position: fixed; inset: 0; z-index: 65; border: 0; border-radius: 0; height: var(--phone-chat-height, 100dvh); min-height: 0; }
+  .chat-open { position: fixed; inset: var(--phone-chat-top, 0px) 0 auto; z-index: 65; border: 0; border-radius: 0; height: var(--phone-chat-height, 100dvh); min-height: 0; overflow: hidden; }
   .chat-open .chat-list { display: none; }
   .chat-open .chat-thread { display: flex; height: 100%; }
   .chat-back { display: inline-flex !important; }

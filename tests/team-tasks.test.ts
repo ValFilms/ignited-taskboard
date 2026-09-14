@@ -24,7 +24,7 @@ test("Karl's client refilming request reaches owner; unrelated staff cannot see 
   const john = next.members[2];
   assert(!visibleState(next, john).tasks.some(t => t.id === created.id));
   for (const type of ["completeTask", "reassignTask", "reopenTask"]) assert.throws(() => transition(next, john, { type, taskId: created.id, value: "john" }), /Only/);
-  assert.throws(() => transition(s, karl, { type: "createTask", clientId: "demo-6", task }, now), /accessible/);
+  assert.equal(transition(s, karl, { type: "createTask", clientId: "demo-6", task }, now).tasks.at(-1)!.clientId, "demo-6");
   assert.deepEqual(next.clients, s.clients);
 });
 test("Custom completion notifies creator, reopens, and never advances the delivery stage", () => {

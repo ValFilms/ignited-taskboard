@@ -38,10 +38,10 @@ for (const actor of ["owner", "yaniv", "carl"]) test(`${actor} can move a manual
   }
 });
 
-test("Recipients cannot edit the client; assigners can only select accessible non-closed clients", () => {
+test("Recipients cannot edit the client; assigners can select all non-closed clients", () => {
   const s = fixture(), original = structuredClone(s);
   assert.throws(() => move(s, "john", "demo-1"), /Only the task assigner/);
-  assert.throws(() => move(s, "carl", "demo-6"), /accessible/);
+  assert.equal(move(s, "carl", "demo-6").tasks.at(-1)!.clientId, "demo-6");
   for (const clientId of ["missing", " ", null, 0, {}, []]) {
     assert.throws(() => move(s, "owner", clientId as string), /valid client|accessible/);
   }

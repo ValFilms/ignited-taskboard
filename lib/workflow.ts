@@ -13,6 +13,7 @@ export type Stage =
   | "Active"
   | "Closed";
 export type Member = { id: string; name: string; role: Role };
+export type TaskTemplate = { id: string; title: string; category: string; notes: string };
 export type Task = {
   id: string;
   clientId: string;
@@ -32,6 +33,7 @@ export type Task = {
   dueAt: string | null;
   cycle: number;
   notes?: string;
+  category?: string;
 };
 export type Client = {
   id: string;
@@ -55,6 +57,10 @@ export type Client = {
   trialEnd?: string;
   nextUpdate?: string;
   pipelineRevision?: number;
+  trialStartedAt?: string;
+  trialPaymentPending?: boolean;
+  taskTemplates?: TaskTemplate[];
+  templateRevision?: number;
 };
 export type Notice = {
   id: string;
@@ -68,6 +74,7 @@ export type Notice = {
   threadId?: string;
 };
 export type State = {
+  clientDirectory?: Pick<Client, "id" | "name" | "stage" | "taskTemplates" | "templateRevision">[];
   messages?: Message[];
   pushDevices?: Device[];
   pushQueue?: Delivery[];
@@ -103,10 +110,10 @@ export const canAssignTask = (t: Task, m: Member) => t.kind === "custom" ||
 // Only task changes invalidate an open edit form; new comments do not.
 export const taskVersion = (t: Task) => JSON.stringify([t.id, t.clientId, t.kind,
   t.title, t.notes || "", t.assignee, t.dueAt, t.status, t.createdAt, t.createdBy || "",
-  t.completedAt || "", t.cycle, t.archivedAt || "", t.revision || 0]);
+  t.completedAt || "", t.cycle, t.archivedAt || "", t.revision || 0, t.category || ""]);
 export const pipelineVersion = (s: State, c: Client) => JSON.stringify([
   c.stage, c.pipelineRevision || 0, c.owner, c.onboarding, c.rawFiles, c.driveUrl,
-  c.launchCall, c.paymentConfirmed, c.launchedAt, c.trialEnd, c.nextUpdate,
+  c.launchCall, c.paymentConfirmed, c.launchedAt, c.trialEnd, c.nextUpdate, c.trialStartedAt, c.trialPaymentPending,
   s.tasks.filter(t => t.clientId === c.id).map(taskVersion),
 ]);
 const iso = (n: number) => new Date(n).toISOString();
@@ -124,6 +131,7 @@ export function visibleState(s: State, m: Member): State {
   const messageIds = new Set(messages?.map(message => message.id));
   return {
     ...publicState,
+    clientDirectory: s.clients.map(({id, name, stage, taskTemplates, templateRevision}) => ({id, name, stage, taskTemplates, templateRevision})),
     ...(messages ? {messages} : {}),
     members: s.members.map(({ id, name, role }) => ({ id, name, role })),
     tasks,
@@ -139,6 +147,7 @@ export function visibleState(s: State, m: Member): State {
               closebot: "",
               onboarding: {},
               paymentConfirmed: false,
+              trialPaymentPending: undefined,
             },
       ),
     notifications: s.notifications.filter((n) => n.userId === m.id && (n.messageId ? messageIds.has(n.messageId) : (isOwner(m) || ids.has(n.clientId) || tasks.some(t => t.id === n.taskId)))),
@@ -259,13 +268,18 @@ export type Action = {
   taskVersion?: string;
   pipelineVersion?: string;
   reason?: string;
+  ids?: string[];
+  snapshots?: {id: string; version: string}[];
+  trial?: {start: string; end: string; paymentPending: boolean};
+  template?: TaskTemplate;
+  templateRevision?: number;
   driveUrl?: string;
   value?: string;
   key?: string;
   files?: { path: string; name: string }[];
   profile?: Partial<Client>;
   member?: Member;
-  task?: { title: string; assignee: string; notes?: string; dueAt?: string | null };
+  task?: { title: string; assignee: string; notes?: string; dueAt?: string | null; category?: string };
 };
 export function transition(
   input: State,
@@ -279,6 +293,25 @@ export function transition(
     "Unauthorized",
   );
   if (a.type === "sendMessage") { sendMessage(s, m, a.message, now); return s; }
+  if (a.type === "bulkComplete") {
+    assert(Array.isArray(a.snapshots) && a.snapshots.length > 0 && a.snapshots.length <= 100, "Select 1–100 tasks");
+    assert(new Set(a.snapshots!.map(x => x.id)).size === a.snapshots!.length, "Select each task once");
+    for (const snapshot of a.snapshots!) {
+      const task = s.tasks.find(t => t.id === snapshot.id);
+      assert(task && taskVersion(task) === snapshot.version, "A selected task changed. Review your selection and try again.");
+    }
+    // Each normal permission and status check runs on a private copy. Failure saves nothing.
+    return a.snapshots!.reduce((state, snapshot) => transition(state, m, {type: "completeTask", taskId: snapshot.id}, now), s);
+  }
+  if (a.type === "bulkNotices") {
+    assert(Array.isArray(a.ids) && a.ids.length > 0 && a.ids.length <= 1000 && a.ids.every(id => typeof id === "string"), "Select 1–1,000 notifications");
+    assert(a.value === "read" || a.value === "unread", "Choose read or unread");
+    const visible = new Set(visibleState(s, m).notifications.map(n => n.id));
+    assert(a.ids!.every(id => visible.has(id)), "Only your available notifications can be changed");
+    s.notifications.filter(n => n.userId === m.id && a.ids!.includes(n.id)).forEach(n => {n.read = a.value === "read";});
+    if (a.value === "read" && s.pushQueue) s.pushQueue = s.pushQueue.filter(q => !a.ids!.includes(q.noticeId));
+    return s;
+  }
   if (a.type === "readConversation") {
     const messages = s.messages || [];
     const end = messages.findIndex(message => message.id === a.value && message.threadId === a.key && canReadMessage(s, m, message));
@@ -333,7 +366,7 @@ export function transition(
         assert(typeof clientId === "string", "Choose a valid client or General team task");
         if (clientId !== t.clientId) {
           assert(canChangeTaskClient(t), "Workflow tasks must stay linked to their original client");
-          assert(!clientId || visibleState(s, m).clients.some(c => c.id === clientId && c.stage !== "Closed"), "Choose an accessible client that is not closed");
+          assert(!clientId || s.clients.some(c => c.id === clientId && c.stage !== "Closed"), "Choose an accessible client that is not closed");
         }
         assert(data && typeof data.title === "string" && data.title.trim() && data.title.trim().length <= 160, "Enter a task title (up to 160 characters)");
         assert(typeof data?.notes === "string" && data.notes.length <= 4000, "Task notes must be at most 4000 characters");
@@ -346,6 +379,10 @@ export function transition(
         assert(t.status === "open" || dueAt === t.dueAt, "Completed tasks and tasks awaiting approval keep their deadline");
         if (t.dueAt !== dueAt || t.assignee !== data!.assignee) t.cycle++;
         t.title = data!.title.trim(); t.notes = data!.notes!.trim();
+        if (data!.category !== undefined) {
+          assert(typeof data!.category === "string" && data!.category.length <= 80, "Category must be at most 80 characters");
+          t.category = data!.category.trim();
+        }
         t.assignee = data!.assignee; t.dueAt = dueAt;
         t.clientId = clientId;
       }
@@ -374,11 +411,13 @@ export function transition(
       assert(s.members.some(u => u.id === data?.assignee), "Choose a team member");
       assert(data?.dueAt === undefined || data.dueAt === null || (typeof data.dueAt === "string" && Number.isFinite(Date.parse(data.dueAt)) && Date.parse(data.dueAt) > now), "Choose a future deadline or leave it empty");
       const clientId = a.clientId || "";
-      assert(typeof clientId === "string" && (!clientId || visibleState(s, m).clients.some(c => c.id === clientId && c.stage !== "Closed")), "Choose an accessible active client");
+      assert(typeof clientId === "string" && (!clientId || s.clients.some(c => c.id === clientId && c.stage !== "Closed")), "Choose an accessible active client");
+      assert(data!.category === undefined || typeof data!.category === "string" && data!.category.length <= 80, "Category must be at most 80 characters");
       task = { id: crypto.randomUUID(), clientId, kind: "custom", title: data!.title.trim(), assignee: data!.assignee,
         createdBy: m.id, notes: data!.notes?.trim() || "", status: "open", createdAt: iso(now),
         dueAt: data!.dueAt ? iso(Date.parse(data!.dueAt)) : null, cycle: 0 };
       s.tasks.push(task);
+      task.category = data!.category?.trim() || "";
       notice(s, task.assignee, clientId, `${m.name} assigned you: ${task.title}`, now, undefined, task.id);
     } else {
       assert(task?.kind === "custom", "Task not found");
@@ -441,6 +480,43 @@ export function transition(
       "Only the assigned team member may submit this task",
     );
   switch (a.type) {
+    case "saveTemplate":
+    case "deleteTemplate": {
+      own();
+      assert(a.templateRevision === (client.templateRevision || 0), "Templates changed. Reopen this form and try again.");
+      if (a.type === "deleteTemplate") {
+        assert(client.taskTemplates?.some(t => t.id === a.key), "Template not found");
+        client.taskTemplates = client.taskTemplates!.filter(t => t.id !== a.key);
+      } else {
+        const t = a.template;
+        assert(t && typeof t.id === "string" && /^[\w-]{1,80}$/.test(t.id) && typeof t.title === "string" && t.title.trim() && t.title.length <= 160 && typeof t.category === "string" && t.category.length <= 80 && typeof t.notes === "string" && t.notes.length <= 4000, "Enter a valid template title, category and instructions");
+        const others = (client.taskTemplates || []).filter(x => x.id !== t!.id);
+        assert(others.length < 50, "Use up to 50 templates per client");
+        client.taskTemplates = [...others, {id: t!.id, title: t!.title.trim(), category: t!.category.trim(), notes: t!.notes.trim()}];
+      }
+      client.templateRevision = (client.templateRevision || 0) + 1;
+      break;
+    }
+    case "setTrial": {
+      own();
+      assert(a.pipelineVersion === pipelineVersion(s, client), "The client changed. Reopen trial dates and review the latest details.");
+      const trial = a.trial;
+      assert(trial && typeof trial.start === "string" && typeof trial.end === "string" && Number.isFinite(Date.parse(trial.start)) && Number.isFinite(Date.parse(trial.end)) && Date.parse(trial.end) > Date.parse(trial.start) && typeof trial.paymentPending === "boolean", "Choose valid trial dates; the end must follow the start");
+      assert(typeof a.reason === "string" && a.reason.trim() && a.reason.length <= 2000, "Add a reason (up to 2000 characters)");
+      const previous = client.stage;
+      const affected = s.tasks.filter(t => t.clientId === client.id && t.kind !== "custom" && !t.archivedAt && t.status !== "done");
+      for (const t of affected) {t.archivedAt = iso(now); t.archivedBy = m.id; t.revision = (t.revision || 0) + 1;}
+      const obsolete = new Set(s.notifications.filter(n => n.clientId === client.id && !n.messageId && (!n.taskId || affected.some(t => t.id === n.taskId))).map(n => {n.read = true; return n.id;}));
+      if (s.pushQueue) s.pushQueue = s.pushQueue.filter(q => !obsolete.has(q.noticeId));
+      client.stage = "Trial"; client.trialStartedAt = iso(Date.parse(trial!.start)); client.trialEnd = iso(Date.parse(trial!.end));
+      client.trialPaymentPending = trial!.paymentPending;
+      client.pipelineRevision = (client.pipelineRevision || 0) + 1;
+      delete client.nextUpdate;
+      const text = `${m.name} set ${client.name}'s trial: ${client.trialStartedAt} to ${client.trialEnd}${trial!.paymentPending ? " (payment pending)" : ""}. Previous stage: ${previous}. ${a.reason!.trim()}`;
+      s.events.push({id: crypto.randomUUID(), clientId: client.id, text, at: iso(now)});
+      for (const id of new Set([...owners(s).map(u => u.id), ...affected.map(t => t.assignee)])) if (id !== m.id) notice(s, id, client.id, text, now);
+      return s;
+    }
     case "movePipeline": {
       assert(m.role === "approver", "Only the ad approver may move the pipeline");
       assert(a.pipelineVersion === pipelineVersion(s, client), "The pipeline changed. Close this form and reopen it to review the latest work.");
@@ -491,6 +567,7 @@ export function transition(
         }
       } else if (target === "Trial") {
         client.launchedAt = iso(now); client.trialEnd = iso(now + hours(24 * 14));
+        client.trialStartedAt = iso(now); client.trialPaymentPending = true;
       } else if (target === "Active") client.nextUpdate = iso(now + hours(60));
       if (["In review", "Campaign setup"].includes(target)) client.driveUrl = link!.url;
       const text = `${m.name} moved ${client.name}: ${previous} → ${target}. ${a.reason!.trim()}`;
@@ -694,11 +771,13 @@ export function transition(
       client.stage = "Trial";
       client.launchedAt = iso(now);
       client.trialEnd = iso(now + hours(24 * 14));
+      client.trialStartedAt = iso(now); client.trialPaymentPending = true;
       break;
     case "continue":
       own();
       assert(client.stage === "Trial", "Client is not in trial");
       client.stage = "Active";
+      client.trialPaymentPending = false;
       client.nextUpdate = iso(now + hours(60));
       break;
     case "close":

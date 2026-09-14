@@ -44,6 +44,10 @@ import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
 import ProfileMenu from "./profile-menu";
 import TeamTask from "./team-task";
+import type { ChatFiles } from "./chat-media";
+import type { Attachment } from "../lib/attachments";
+import TrialControls from "./trial-controls";
+import { BulkTasks, BulkInbox } from "./bulk-actions";
 import PipelineControls from "./pipeline-controls";
 import TeamChat, { TaskDiscussion } from "./team-chat";
 import PushSettings from "./push-settings";
@@ -106,6 +110,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
   const activeGroupRef = useRef<HTMLButtonElement>(null);
   const activeListHeadingRef = useRef<HTMLHeadingElement>(null);
   const returnToActiveGroup = useRef(false);
+  const uploadedChatFiles = useRef(new Map<string, {file: File; attachment: Attachment}[]>());
   const changes = useRef(0);
   const currentUser = useRef("");
   const [all, setAll] = useState<State | null>(null),
@@ -322,6 +327,28 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       setBusy(false);
     }
   }
+  const chatFiles: ChatFiles = {
+    send: async (message, files) => {
+      const actor = currentUser.current; changes.current++; setError("");
+      try {
+        if (!configured) throw new Error("Sending attachments requires a connected test workspace. You can record and review a memo here, but demo files are not uploaded or sent.");
+        const saved = uploadedChatFiles.current.get(message.id) || []; uploadedChatFiles.current.set(message.id, saved);
+        for (const file of files) {
+          if (saved.some(item => item.file === file)) continue;
+          const signed = await api("/api/chat-files", {type: "sign", message, file: {name: file.name, size: file.size, contentType: file.type}});
+          const {error} = await auth!.storage.from("chat-attachments").uploadToSignedUrl(signed.path, signed.token, file, {contentType:file.type});
+          if (error) throw new Error("Upload failed. Check your connection and the storage file limits, then retry.");
+          saved.push({file, attachment: {path:signed.path, name:file.name, contentType:file.type, size:file.size}});
+        }
+        const next = await api("/api/chat-files", {type:"complete", message:{...message, attachments: files.map(file => saved.find(item => item.file === file)!.attachment)}});
+        if (actor === currentUser.current) {changes.current++; setAll(next);} uploadedChatFiles.current.delete(message.id); return true;
+      } catch(e) {setError((e as Error).message); return false;}
+    },
+    open: async (messageId, file, download) => {
+      if (!configured) throw new Error("Attachments require the connected workspace");
+      const result = await api("/api/chat-files", {type:"download", messageId, path:file.path, download}); return result.url;
+    },
+  };
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     if(practiceMember)return;
@@ -615,6 +642,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
       </span>
       <span>
         <strong>{t.title}</strong>
+        {t.category && <small>{t.category}</small>}
         <small>{s.clients.find((c) => c.id === t.clientId)?.name || "General team task"} · {s.members.find(m => m.id === t.assignee)?.name}</small>
       </span>
       <span className="task-date">
@@ -980,7 +1008,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                   <button data-tour={`filter-${id}`} key={id} aria-pressed={taskFilter === id} onClick={() => setTaskFilter(id)}>{label}</button>)}
               </div>
               {taskFilter === "archive" && <div className="archive-heading"><p>Deleted tasks are saved here with their details and comments. Task assigners and workspace owners can restore them.</p><label className="archive-search"><Search size={18}/><input aria-label="Search archived tasks" placeholder="Search archived tasks" value={archiveQuery} onChange={e => setArchiveQuery(e.target.value)}/></label></div>}
-              {workTasks.map(taskCard)}
+              <BulkTasks key={`${userId}:${taskFilter}`} tasks={workTasks} me={me} act={act} render={taskCard} />
               {!workTasks.length && (
                 <div className="empty">
                   <CheckCircle2 />
@@ -1006,44 +1034,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               )}
             </div>
           )}
-          {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} selected={chatThread} onSelect={setChatThread} />}
-          {view === "notifications" && (
-            <div className="panel">
-              <div className="panel-heading">
-                <h2>Your notifications</h2>
-                <button
-                  data-tour="read"
-                  className="text-button"
-                  onClick={() => void act({ type: "read" })}
-                >
-                  Mark all read
-                </button>
-              </div>
-              {s.notifications
-                .slice()
-                .reverse()
-                .map((n) => (
-                  <button
-                    className="notice"
-                    key={n.id}
-                    onClick={() => openNotice(n)}
-                  >
-                    <span className={n.read ? "read-dot" : "unread-dot"} />
-                    <span>
-                      {n.text}
-                      <small>{date(n.createdAt)}</small>
-                    </span>
-                    <ChevronRight size={18} />
-                  </button>
-                ))}
-              {!s.notifications.length && (
-                <div className="empty">
-                  <Bell />
-                  <h3>Your inbox is clear.</h3>
-                </div>
-              )}
-            </div>
-          )}
+          {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} media={chatFiles} selected={chatThread} onSelect={setChatThread} />}
+          {view === "notifications" && <div className="panel"><div className="panel-heading"><h2>Your notifications</h2></div><BulkInbox key={userId} notices={s.notifications} act={act} open={openNotice}/></div>}
           {view === "sales" && owner && (
             <div className="panel connection">
               <Users size={32} />
@@ -1286,6 +1278,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
                   )}
                 </div>
               </div>
+              {owner && <TrialControls key={`trial:${current.id}`} state={s} client={current} act={act} />}
               {me.role === "approver" && <PipelineControls key={current.id} state={s} client={current} act={act} />}
               {current.stage === "Onboarding" && owner && (
                 <section className="detail-section">
@@ -1556,8 +1549,9 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
               {current.stage === "Trial" && (
                 <section className="detail-section trial">
                   <Flame />
-                  <h3>The 14-day trial is live.</h3>
-                  <p>Launched {date(current.launchedAt)}</p>
+                  <h3>Client trial</h3>
+                  <p>Trial starts {date(current.trialStartedAt || current.launchedAt)}</p>
+                  {current.launchedAt && <p>Ads launched {date(current.launchedAt)}</p>}
                   <p>Trial ends {date(current.trialEnd)}</p>
                   <small>
                     Review reminder:{" "}
@@ -1670,8 +1664,8 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           </section>
         </div>
       )}
-      {taskDialog && <TeamTask key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} onOpenClient={id => {setTaskDialog(null); setSelected(id);}} />}
-      {commentTaskId && <TaskDiscussion key={`${userId}:${commentTaskId}`} state={s} me={me} taskId={commentTaskId} act={act} error={error} onClose={() => setCommentTaskId(null)} />}
+      {taskDialog && <TeamTask media={chatFiles} key={taskDialog.id || "new"} state={s} me={me} taskId={taskDialog.id} task={s.tasks.find(t => t.id === taskDialog.id)} clientId={taskDialog.clientId} act={act} error={error} onClose={() => setTaskDialog(null)} onOpenClient={id => {setTaskDialog(null); setSelected(id);}} />}
+      {commentTaskId && <TaskDiscussion media={chatFiles} key={`${userId}:${commentTaskId}`} state={s} me={me} taskId={commentTaskId} act={act} error={error} onClose={() => setCommentTaskId(null)} />}
       {!practiceMember&&<NotificationToasts key={userId} notices={s.notifications} onOpen={openNotice} />}
     </div>
   );

@@ -1,5 +1,24 @@
 # Ignited team workspace
 
+## Staged v13 changes
+
+- Owners can open any client and choose **Start or record a trial**, including
+  Active or Closed clients. Set the actual start/end, payment-pending status and
+  reason. Existing 14-day / three-day reminder defaults remain. This records
+  trial status independently of launch/payment setup and preserves prior history.
+- **My work** supports selecting up to 100 custom tasks and confirming completion
+  together. Automatic workflow tasks retain their specific approval steps.
+- **Inbox** supports selection, mark read/unread, and mark all read.
+- New/edit custom tasks can choose any non-closed client from a minimal directory.
+  Owners can save client-specific templates with categories and instructions in
+  New task; teammates can apply them without seeing private contact/payment data.
+- Mobile chat follows both the visual viewport's height and its offset when the
+  keyboard opens. Chat supports attachments and locally previewed voice memos;
+  see [chat storage setup and acceptance checks](docs/CHAT-FILES.md).
+
+These changes require preview testing and the owner's go-live instruction before
+publication. Chat uploads additionally require a configured private test bucket.
+
 Next.js app for Ignited Content Co. See [SPEC.md](SPEC.md) for workflow and access rules.
 
 ## Working together

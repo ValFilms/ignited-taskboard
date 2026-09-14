@@ -1,5 +1,37 @@
 # Ignited Content Co. — version 1
 
+## v13 additions (supersede the corresponding restrictions below)
+
+Either owner may record/restart a trial from any client stage, with explicit
+start/end timestamps, payment-pending status and a reason. The end must follow
+the start; past trials can be recorded. An optimistic pipeline snapshot prevents
+stale edits. Trial dates are distinct from actual ads-launched history and external
+card/payment setup. The client moves to Trial, active update scheduling stops,
+and unfinished automatic workflow tasks are archived. Custom/completed work and
+files remain. Superseded non-chat alerts and queued deliveries are retired. Both
+owners receive the existing three-day trial reminder, including immediately when
+a recorded end date is already within the reminder window. Each correction gets
+a new reminder revision. The existing scheduler/push setup is unchanged.
+
+Bulk completion supports up to 100 custom tasks with snapshot and participant
+checks, atomically. A stale, archived, unauthorized or workflow task rejects the
+whole batch. Completion retains the usual participant notices. Inbox selection
+supports up to 1,000 own visible notifications, marked read or unread. Marking
+read removes pending delivery for selected notices; marking unread creates no
+new notices or push deliveries.
+
+Every teammate receives a minimal client directory containing IDs, names, stages
+and task templates. It allows creating/moving custom tasks to any non-closed
+client. It does not expose unrelated client records, private fields, activity,
+files or messages. Task participants receive the usual redacted context after
+assignment. Owner-managed templates are per-client, capped at 50, and contain
+title, category and instructions. Template edits use optimistic revisions and
+never change existing tasks. Categories may also be typed on individual tasks.
+
+Chat and task comments support verified private attachments and microphone voice
+recording, with browser-format detection, preview/discard and a five-minute cap.
+See [CHAT-FILES.md](docs/CHAT-FILES.md) for storage prerequisites and limits.
+
 Internal delivery workspace for the agency's mobile-detailing clients. GitHub owns source; Vercel hosts Next.js. Supabase provides Auth, private raw-footage storage, and a durable workspace record. No live data is bundled in source.
 
 ## Access

@@ -106,8 +106,8 @@ test('API regression with isolated Supabase transport', async t => {
       const comments=structuredClone(state.messages), edit=(clientId:string)=>({type:'editTask',taskId:task.id,taskVersion:taskVersion(task),clientId,task:{title:task.title,assignee:task.assignee,notes:task.notes,dueAt:task.dueAt}});
       const before=writes;
       assert.equal((await workspace.POST(req(edit('demo-1'),'john'))).status,403);
-      assert.equal((await workspace.POST(req(edit('demo-6'),'carl'))).status,400);
       assert.equal(writes,before);
+      assert.equal((await workspace.POST(req(edit('demo-6'),'carl'))).status,200); task=state.tasks.at(-1)!;
       assert.equal((await workspace.POST(req(edit('demo-2'),'carl'))).status,200); task=state.tasks.at(-1)!;
       assert.equal(task.clientId,'demo-2'); assert.deepEqual(state.messages,comments);
       let visible=await (await workspace.GET(req(undefined,'john'))).json();

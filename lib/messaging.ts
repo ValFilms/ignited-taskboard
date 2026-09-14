@@ -1,8 +1,9 @@
 import type { Member, State, Task } from "./workflow";
+import { type Attachment, MAX_ATTACHMENTS, validateAttachment } from "./attachments";
 
 export type MessageTarget = { kind: "team" } | { kind: "direct"; memberId: string } | { kind: "task"; taskId: string };
-export type Message = { id: string; senderId: string; body: string; createdAt: string; threadId: string; target: MessageTarget };
-export type MessageInput = { id: string; body: string; target: MessageTarget };
+export type Message = { id: string; senderId: string; body: string; createdAt: string; threadId: string; target: MessageTarget; attachments?: Attachment[] };
+export type MessageInput = { id: string; body: string; target: MessageTarget; attachments?: Attachment[] };
 export const canDiscuss = (task: Task, member: Member) => member.role === "approver" || member.role === "manager" || task.assignee === member.id || task.createdBy === member.id;
 export function threadKey(target: MessageTarget, senderId: string): string {
   if (target.kind === "team") return "team";
@@ -35,7 +36,11 @@ export function conversationMembers(state: State, member: Member, target: Messag
 export const mentionName = (member: Member) => member.name.trim().split(/\s+/)[0];
 export function sendMessage(state: State, member: Member, input: MessageInput | undefined, now: number) {
   if (!input || typeof input.id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(input.id)) throw new Error("Invalid message ID");
-  if (typeof input.body !== "string" || !input.body.trim() || input.body.length > 4000) throw new Error("Enter a message of up to 4,000 characters");
+  if (input.attachments !== undefined && (!Array.isArray(input.attachments) || input.attachments.length > MAX_ATTACHMENTS)) throw new Error("Choose up to 5 attachments");
+  const attachments = input.attachments || [];
+  for (const file of attachments) {validateAttachment(file); if (typeof file.path !== "string" || file.path.length > 600) throw new Error("Invalid attachment path");}
+  if (new Set(attachments.map(f => f.path)).size !== attachments.length) throw new Error("Duplicate attachment");
+  if (typeof input.body !== "string" || (!input.body.trim() && !attachments.length) || input.body.length > 4000) throw new Error("Enter a message of up to 4,000 characters");
   const recipients = conversationMembers(state, member, input.target);
   const taskId = input.target.kind === "task" ? input.target.taskId : undefined;
   if (taskId && state.tasks.find(t => t.id === taskId)?.archivedAt) throw new Error("Restore this task from Archive before adding comments");
@@ -43,7 +48,7 @@ export function sendMessage(state: State, member: Member, input: MessageInput | 
   const body = input.body.trim(), threadId = threadKey(target, member.id);
   const existing = state.messages?.find(m => m.id === input.id);
   if (existing) {
-    if (existing.senderId !== member.id || existing.threadId !== threadId || existing.body !== body) throw new Error("Message ID already used");
+    if (existing.senderId !== member.id || existing.threadId !== threadId || existing.body !== body || JSON.stringify(existing.attachments || []) !== JSON.stringify(attachments)) throw new Error("Message ID already used");
     return;
   }
   const handles = new Set(Array.from(body.matchAll(/(?:^|[^\p{L}\p{N}_])@([\p{L}\p{N}_-]+)/gu), match => match[1].toLowerCase()));
@@ -51,6 +56,7 @@ export function sendMessage(state: State, member: Member, input: MessageInput | 
   if (mentioned.some(m => !recipients.some(r => r.id === m.id))) throw new Error("That teammate cannot access this conversation. Assign the task to them or use team chat.");
   const createdAt = new Date(now).toISOString();
   const message: Message = {id: input.id, senderId: member.id, body, target, threadId, createdAt};
+  if (attachments.length) message.attachments = attachments.map(({path, name, contentType, size}) => ({path, name, contentType, size}));
   (state.messages ||= []).push(message);
   const task = target.kind === "task" ? state.tasks.find(t => t.id === target.taskId) : undefined;
   for (const recipient of recipients.filter(m => m.id !== member.id)) {

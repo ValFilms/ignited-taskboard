@@ -23,9 +23,11 @@ export async function POST(req: Request) {
   try {
     const id = await identity(req);
     const body = await req.text();
-    if (body.length > 32000) throw new Error("Request too large");
+    if (body.length > 1000000) throw new Error("Request too large");
     const a = JSON.parse(body) as Action;
+    if (body.length > 32000 && a.type !== "bulkComplete" && a.type !== "setTrial") throw new Error("Request too large");
     if (a.type === "raw") throw new Error("Use the verified upload endpoint");
+    if (a.type === "sendMessage" && a.message?.attachments?.length) throw new Error("Use the verified chat upload endpoint");
     if (a.type === "member") {
       const { state } = await readState();
       if (!isOwner(member(state, id))) throw new Error("Owners only");

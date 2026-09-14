@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./feature-controls.css";
 export const metadata: Metadata = {
   title: "Ignited | Team workspace",
   description: "Private delivery workspace for Ignited Content Co.",
