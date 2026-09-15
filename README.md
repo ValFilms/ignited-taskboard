@@ -1,5 +1,12 @@
 # Ignited team workspace
 
+## Staged v14 sales dashboard
+
+Owners can view GHL contacts, leads, appointments and opportunities in Sales,
+with booking/source/assignee filters and contact details. This is read-only and
+independent of delivery workflows. No sample sales records are shown when the
+connection is unavailable. See [Sales setup and metric definitions](docs/SALES.md).
+
 ## Staged v13 changes
 
 - Personal chats have an **Assign task** button with the conversation partner preselected.

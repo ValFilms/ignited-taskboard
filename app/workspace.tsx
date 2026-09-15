@@ -44,6 +44,7 @@ import { demoState } from "../lib/demo";
 import NotificationToasts from "./notification-toasts";
 import { authenticatedRequest } from "../lib/auth-request";
 import ThemeToggle from "./theme-toggle";
+import SalesDashboard from "./sales-dashboard";
 import ProfileMenu from "./profile-menu";
 import Dialog from "./dialog";
 import TeamTask from "./team-task";
@@ -101,7 +102,7 @@ function initials(name: string) {
     .slice(0, 2)
     .join("");
 }
-export default function Workspace({practiceMember,onPracticeFinish,onPracticeExit}:{practiceMember?:Member;onPracticeFinish?:()=>void;onPracticeExit?:()=>void}={}) {
+export default function Workspace({practiceMember,onPracticeFinish,onPracticeExit,salesReadOnly=false}:{practiceMember?:Member;onPracticeFinish?:()=>void;onPracticeExit?:()=>void;salesReadOnly?:boolean}={}) {
   const configured=serverConfigured&&!practiceMember, auth=practiceMember?null:workspaceAuth;
   const [tourIndex,setTourIndex]=useState(0), [tourEvents,setTourEvents]=useState<string[]>([]), [profileOpen,setProfileOpen]=useState(false);
   const [chatThread, setChatThread] = useState("");
@@ -784,6 +785,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
             <ProfileMenu onOpenChange={practiceMember?setProfileOpen:undefined} me={me} navigate={v => { setView(v); setSelected(null); setError(""); }} signOut={configured ? () => void signOut() : undefined} />
           </div>
         </header>
+        {salesReadOnly&&<div className="demo-banner"><b>READ-ONLY PREVIEW</b> Real account data · changes and messages are disabled. Open Sales to test the GHL connection.</div>}
         {!configured && !practiceMember && (
           <div className="demo-banner">
             <span>
@@ -1063,22 +1065,7 @@ export default function Workspace({practiceMember,onPracticeFinish,onPracticeExi
           )}
           {view === "chat" && <TeamChat key={userId} state={s} me={me} act={act} error={error} media={chatFiles} selected={chatThread} onSelect={setChatThread} onAssignTask={assigneeId => {setError(""); setTaskDialog({assigneeId});}} />}
           {view === "notifications" && <div className="panel"><div className="panel-heading"><h2>Your notifications</h2></div><BulkInbox key={userId} notices={s.notifications} act={act} open={openNotice}/></div>}
-          {view === "sales" && owner && (
-            <div className="panel connection">
-              <Users size={32} />
-              <h2>Sales stays in GHL.</h2>
-              <p>
-                Lead follow-up and appointment booking continue in your existing
-                sales pipeline. Signed clients enter delivery through the Google
-                onboarding form.
-              </p>
-              <span className="badge">GHL sync not connected</span>
-              <p className="muted">
-                No sales records have been imported. Delivery works
-                independently.
-              </p>
-            </div>
-          )}
+          {view === "sales" && owner && <SalesDashboard key={userId} configured={configured} api={api} />}
           {view === "settings" && (
             <div className="settings-grid">
               <section className="panel">

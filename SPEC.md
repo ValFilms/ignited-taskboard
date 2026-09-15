@@ -205,6 +205,13 @@ Client onboarding checklists and Google Form intake are unchanged.
 
 ## Intake and external systems
 
+Sales provides an owner-only, read-only projection of the configured GHL sales
+sub-account. It reads contacts, calendar events and opportunities using private
+server credentials and never creates or updates delivery clients or tasks.
+Unconfigured environments show no sales data. Booking counts are specific to the
+selected calendar and UTC date range; incomplete data is reported explicitly.
+See [Sales](docs/SALES.md) for metric definitions, scopes and limits.
+
 The Google Form is authoritative. GHL remains the separate sales system; Closebot booking remains external. No Stripe matching, roster import, automatic charging or client-specific checkout generation. Form response ID replays are ignored; matching email + business name with a different response ID requires manual duplicate review. Historical imports use historical=true and send no old assignment notices. Confirm actual Form/Sheet column names before wiring.
 
 ## Deployment state and limits

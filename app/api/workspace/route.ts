@@ -7,6 +7,7 @@ import {
   admin,
 } from "../../../lib/server";
 import { tick, transition, visibleState, Action, isOwner } from "../../../lib/workflow";
+import { salesReadOnlyPreview } from "../../../lib/sales-preview";
 export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
@@ -25,6 +26,11 @@ export async function POST(req: Request) {
     const body = await req.text();
     if (body.length > 1000000) throw new Error("Request too large");
     const a = JSON.parse(body) as Action;
+    if(salesReadOnlyPreview()) {
+      if(a?.type!=="refresh")return Response.json({error:"This sales preview is read-only. Use the live workspace to make changes."},{status:403,headers:{"Cache-Control":"no-store"}});
+      const {state}=await readState();
+      return Response.json(visibleState(state,member(state,id)),{headers:{"Cache-Control":"no-store"}});
+    }
     if (body.length > 32000 && a.type !== "bulkComplete" && a.type !== "setTrial") throw new Error("Request too large");
     if (a.type === "raw") throw new Error("Use the verified upload endpoint");
     if (a.type === "sendMessage" && a.message?.attachments?.length) throw new Error("Use the verified chat upload endpoint");

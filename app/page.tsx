@@ -1,2 +1,3 @@
 import Workspace from "./workspace";
-export default function Page() { return <Workspace />; }
+import { salesReadOnlyPreview } from "../lib/sales-preview";
+export default function Page() { return <Workspace salesReadOnly={salesReadOnlyPreview()} />; }
